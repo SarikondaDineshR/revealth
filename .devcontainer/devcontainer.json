@@ -1,0 +1,47 @@
+{
+  "name": "Revealth v0.1",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-20-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "moby": true,
+      "dockerDashComposeVersion": "v2"
+    }
+  },
+  "privileged": true,
+  "remoteUser": "node",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "postCreateCommand": "bash .devcontainer/postCreateCommand.sh",
+  "forwardPorts": [3000, 4000, 7233, 8080],
+  "portsAttributes": {
+    "3000": {
+      "label": "Revealth Web",
+      "onAutoForward": "notify"
+    },
+    "4000": {
+      "label": "Revealth API",
+      "onAutoForward": "notify"
+    },
+    "7233": {
+      "label": "Temporal gRPC",
+      "onAutoForward": "silent"
+    },
+    "8080": {
+      "label": "Temporal UI",
+      "onAutoForward": "notify"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "Prisma.prisma",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "typescript.tsdk": "node_modules/typescript/lib"
+      }
+    }
+  }
+}

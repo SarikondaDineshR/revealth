@@ -1,0 +1,263 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String      @id @default(uuid()) @db.Uuid
+  email      String      @unique
+  name       String?
+  workspaces Workspace[]
+  approvals  Approval[]  @relation("ApprovalApprover")
+  createdAt  DateTime    @default(now()) @map("created_at")
+
+  @@map("users")
+}
+
+model Workspace {
+  id          String        @id @default(uuid()) @db.Uuid
+  ownerId     String        @map("owner_id") @db.Uuid
+  name        String
+  status      String
+  owner       User          @relation(fields: [ownerId], references: [id])
+  artifacts   Artifact[]
+  approvals   Approval[]
+  workflows   WorkflowRun[]
+  agentRuns   AgentRun[]
+  tasks       Task[]
+  codexExecutionRuns CodexExecutionRun[]
+  auditLogs   AuditLog[]
+  memory      MemoryEntry[]
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  @@map("workspaces")
+}
+
+model WorkflowRun {
+  id           String      @id @default(uuid()) @db.Uuid
+  workspaceId  String      @map("workspace_id") @db.Uuid
+  workflowType String      @map("workflow_type")
+  status       String
+  inputJson    Json        @map("input_json")
+  outputJson   Json?       @map("output_json")
+  workspace    Workspace   @relation(fields: [workspaceId], references: [id])
+  agentRuns    AgentRun[]
+  auditLogs    AuditLog[]
+  artifacts     Artifact[]
+  createdAt    DateTime    @default(now()) @map("created_at")
+  completedAt  DateTime?   @map("completed_at")
+
+  @@map("workflow_runs")
+}
+
+model Artifact {
+  id                String      @id @default(uuid()) @db.Uuid
+  workspaceId       String      @map("workspace_id") @db.Uuid
+  parentArtifactId  String?     @map("parent_artifact_id") @db.Uuid
+  sourceWorkflowRunId String?   @map("source_workflow_run_id") @db.Uuid
+  sourceApprovalId  String?     @map("source_approval_id") @db.Uuid
+  generatedByAgent  String?     @map("generated_by_agent")
+  promptVersion     String?     @map("prompt_version")
+  modelProvider     String?     @map("model_provider")
+  modelName         String?     @map("model_name")
+  artifactType      String      @map("artifact_type")
+  version           Int
+  status            String
+  schemaVersion     String      @map("schema_version")
+  contentJson       Json        @map("content_json")
+  sourceArtifactIds String[]    @default([]) @map("source_artifact_ids") @db.Uuid
+  workspace         Workspace   @relation(fields: [workspaceId], references: [id])
+  sourceWorkflowRun WorkflowRun? @relation(fields: [sourceWorkflowRunId], references: [id])
+  sourceApproval    Approval?   @relation("ArtifactSourceApproval", fields: [sourceApprovalId], references: [id])
+  approvals         Approval[]  @relation("ArtifactApprovals")
+  tasks             Task[]
+  createdAt         DateTime    @default(now()) @map("created_at")
+
+  @@unique([workspaceId, artifactType, version])
+  @@map("artifacts")
+}
+
+model Approval {
+  id              String      @id @default(uuid()) @db.Uuid
+  workspaceId     String      @map("workspace_id") @db.Uuid
+  artifactId      String      @map("artifact_id") @db.Uuid
+  artifactVersion Int         @map("artifact_version")
+  status          String
+  approverId      String?     @map("approver_id") @db.Uuid
+  decisionNotes   String?     @map("decision_notes")
+  workspace       Workspace   @relation(fields: [workspaceId], references: [id])
+  artifact        Artifact    @relation("ArtifactApprovals", fields: [artifactId], references: [id])
+  approver        User?       @relation("ApprovalApprover", fields: [approverId], references: [id])
+  auditLogs       AuditLog[]
+  sourcedArtifacts Artifact[] @relation("ArtifactSourceApproval")
+  decidedAt       DateTime?   @map("decided_at")
+  createdAt       DateTime    @default(now()) @map("created_at")
+
+  @@map("approvals")
+}
+
+model AgentRun {
+  id             String       @id @default(uuid()) @db.Uuid
+  workspaceId    String       @map("workspace_id") @db.Uuid
+  workflowRunId  String       @map("workflow_run_id") @db.Uuid
+  agentName      String       @map("agent_name")
+  status         String
+  inputJson      Json         @map("input_json")
+  outputJson     Json?        @map("output_json")
+  modelProvider  String?      @map("model_provider")
+  modelName      String?      @map("model_name")
+  promptVersion  String?      @map("prompt_version")
+  errorJson      Json?        @map("error_json")
+  workspace      Workspace    @relation(fields: [workspaceId], references: [id])
+  workflowRun    WorkflowRun  @relation(fields: [workflowRunId], references: [id])
+  auditLogs      AuditLog[]
+  createdAt      DateTime     @default(now()) @map("created_at")
+  completedAt    DateTime?    @map("completed_at")
+
+  @@map("agent_runs")
+}
+
+model Task {
+  id                 String             @id @default(uuid()) @db.Uuid
+  workspaceId        String             @map("workspace_id") @db.Uuid
+  sourceArtifactId   String             @map("source_artifact_id") @db.Uuid
+  title              String
+  description        String
+  taskType           String             @map("task_type")
+  priority           String
+  status             String
+  acceptanceCriteria Json               @map("acceptance_criteria")
+  dependencies       String[]           @default([]) @db.Uuid
+  workspace          Workspace          @relation(fields: [workspaceId], references: [id])
+  sourceArtifact     Artifact           @relation(fields: [sourceArtifactId], references: [id])
+  issueDrafts        GitHubIssueDraft[]
+  createdAt          DateTime           @default(now()) @map("created_at")
+
+  @@map("tasks")
+}
+
+model GitHubConnection {
+  id             String    @id @default(uuid()) @db.Uuid
+  workspaceId    String    @map("workspace_id") @db.Uuid
+  installationId String?   @map("installation_id")
+  repository     String
+  tokenSource    String    @default("env") @map("token_source")
+  status         String
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@unique([workspaceId, repository])
+  @@map("github_connections")
+}
+
+model GitHubIssueDraft {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String    @map("workspace_id") @db.Uuid
+  taskId      String    @map("task_id") @db.Uuid
+  repository  String
+  title       String
+  body        String
+  labels      String[]
+  milestone   String?
+  assignees   String[]
+  status      String
+  task        Task      @relation(fields: [taskId], references: [id])
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@map("github_issue_drafts")
+}
+
+model GitHubIssue {
+  id                String    @id @default(uuid()) @db.Uuid
+  workspaceId       String    @map("workspace_id") @db.Uuid
+  taskId            String    @map("task_id") @db.Uuid
+  sourceArtifactId  String    @map("source_artifact_id") @db.Uuid
+  sourceApprovalId  String?   @map("source_approval_id") @db.Uuid
+  idempotencyKey    String    @unique @map("idempotency_key")
+  repository        String
+  title             String
+  githubIssueNumber Int?      @map("github_issue_number")
+  githubIssueUrl    String?   @map("github_issue_url")
+  githubNodeId      String?   @map("github_node_id")
+  status            String
+  dryRun            Boolean   @default(false) @map("dry_run")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@index([workspaceId, sourceArtifactId])
+  @@index([workspaceId, taskId])
+  @@map("github_issues")
+}
+
+model CodexExecutionRun {
+  id                         String    @id @default(uuid()) @db.Uuid
+  workspaceId                String    @map("workspace_id") @db.Uuid
+  contractArtifactId         String    @map("contract_artifact_id") @db.Uuid
+  sourceGitExecutionPlanId   String    @map("source_git_execution_plan_id") @db.Uuid
+  idempotencyKey             String    @unique @map("idempotency_key")
+  branchName                 String    @map("branch_name")
+  status                     String
+  allowedFiles               String[]  @default([]) @map("allowed_files")
+  forbiddenFiles             String[]  @default([]) @map("forbidden_files")
+  allowedCommands            String[]  @default([]) @map("allowed_commands")
+  forbiddenCommands          String[]  @default([]) @map("forbidden_commands")
+  requiredTests              String[]  @default([]) @map("required_tests")
+  executionLogs              Json      @default("[]") @map("execution_logs")
+  failureReason              String?   @map("failure_reason")
+  workspace                  Workspace @relation(fields: [workspaceId], references: [id])
+  createdAt                  DateTime  @default(now()) @map("created_at")
+  updatedAt                  DateTime  @updatedAt @map("updated_at")
+  startedAt                  DateTime? @map("started_at")
+  completedAt                DateTime? @map("completed_at")
+  cancelledAt                DateTime? @map("cancelled_at")
+
+  @@index([workspaceId, contractArtifactId])
+  @@index([workspaceId, status])
+  @@map("codex_execution_runs")
+}
+
+model MemoryEntry {
+  id           String    @id @default(uuid()) @db.Uuid
+  workspaceId  String    @map("workspace_id") @db.Uuid
+  sourceType   String    @map("source_type")
+  sourceId     String    @map("source_id") @db.Uuid
+  memoryType   String    @map("memory_type")
+  status       String
+  content      String
+  metadataJson Json      @map("metadata_json")
+  embedding    Unsupported("vector")?
+  workspace    Workspace @relation(fields: [workspaceId], references: [id])
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@map("memory_entries")
+}
+
+model AuditLog {
+  id                String       @id @default(uuid()) @db.Uuid
+  workspaceId       String       @map("workspace_id") @db.Uuid
+  workflowRunId     String?      @map("workflow_run_id") @db.Uuid
+  agentRunId        String?      @map("agent_run_id") @db.Uuid
+  actorType         String       @map("actor_type")
+  actorId           String       @map("actor_id")
+  action            String
+  sourceArtifactIds String[]     @default([]) @map("source_artifact_ids") @db.Uuid
+  targetArtifactIds String[]     @default([]) @map("target_artifact_ids") @db.Uuid
+  inputHash         String?      @map("input_hash")
+  outputHash        String?      @map("output_hash")
+  approvalId        String?      @map("approval_id") @db.Uuid
+  status            String
+  errorCode         String?      @map("error_code")
+  eventJson         Json         @map("event_json")
+  workspace         Workspace    @relation(fields: [workspaceId], references: [id])
+  workflowRun       WorkflowRun? @relation(fields: [workflowRunId], references: [id])
+  agentRun          AgentRun?    @relation(fields: [agentRunId], references: [id])
+  approval          Approval?    @relation(fields: [approvalId], references: [id])
+  createdAt         DateTime     @default(now()) @map("created_at")
+
+  @@map("audit_logs")
+}

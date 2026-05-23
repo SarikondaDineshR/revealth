@@ -1,0 +1,14 @@
+node_modules
+.git
+.next
+dist
+coverage
+.turbo
+*.log
+.env
+postgres-data
+temporal-data
+apps/web/.next
+packages/*/dist
+apps/*/dist
+

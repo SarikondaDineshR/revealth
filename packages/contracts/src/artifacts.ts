@@ -18,6 +18,7 @@ export const artifactTypeSchema = z.enum([
   "codex_task_packet_batch",
   "git_execution_plan",
   "codex_execution_contract",
+  "branch_preparation_plan",
 ]);
 
 export const projectBriefSchema = z.object({
@@ -196,6 +197,26 @@ export const codexExecutionContractSchema = z.object({
   sourceIds: z.array(uuidSchema).default([]),
 });
 
+export const branchPreparationPlanSchema = z.object({
+  schemaVersion: z.literal("revealth.branch_preparation_plan.v1"),
+  branchPreparationPlanId: uuidSchema,
+  sourceRunId: uuidSchema,
+  sourceContractId: uuidSchema,
+  recommendedBranchName: nonEmptyString,
+  baseBranch: nonEmptyString,
+  branchCreationCommandPreview: nonEmptyString,
+  rollbackCommandPreview: nonEmptyString,
+  protectedBranchWarning: z.string().nullable(),
+  allowedFilesSummary: z.array(nonEmptyString).min(1),
+  requiredTestsSummary: z.array(nonEmptyString).min(1),
+  approvalRequirements: z.array(nonEmptyString).min(1),
+  approvalRequired: z.literal(true),
+  branchCreationAllowed: z.literal(false),
+  codeExecutionAllowed: z.literal(false),
+  pullRequestCreationAllowed: z.literal(false),
+  sourceIds: z.array(uuidSchema).default([]),
+});
+
 export const codexTaskPacketBatchSchema = z.object({
   schemaVersion: z.literal("revealth.codex_task_packet_batch.v1"),
   codexTaskPacketBatchId: uuidSchema,
@@ -255,5 +276,6 @@ export type GitExecutionPlanItem = z.infer<typeof gitExecutionPlanItemSchema>;
 export type GitExecutionPlan = z.infer<typeof gitExecutionPlanSchema>;
 export type CodexExecutionContractItem = z.infer<typeof codexExecutionContractItemSchema>;
 export type CodexExecutionContract = z.infer<typeof codexExecutionContractSchema>;
+export type BranchPreparationPlan = z.infer<typeof branchPreparationPlanSchema>;
 export type ArtifactEnvelope = z.infer<typeof artifactEnvelopeSchema>;
 export type CreateArtifactRequest = z.infer<typeof createArtifactRequestSchema>;

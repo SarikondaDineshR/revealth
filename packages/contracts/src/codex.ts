@@ -13,7 +13,14 @@ export const generateCodexExecutionContractRequestSchema = z.object({
   maxExecutionScope: z.string().trim().min(1).default("single approved Git execution plan only"),
 });
 
-export const codexExecutionRunStatusSchema = z.enum(["queued", "running", "completed", "failed", "cancelled"]);
+export const codexExecutionRunStatusSchema = z.enum([
+  "queued",
+  "ready_for_live_execution",
+  "running",
+  "completed_dry_run",
+  "failed",
+  "cancelled",
+]);
 
 export const createCodexExecutionRunRequestSchema = z.object({});
 
@@ -35,6 +42,7 @@ export const codexExecutionRunSchema = z.object({
   forbiddenCommands: z.array(nonEmptyString),
   requiredTests: z.array(nonEmptyString),
   executionLogs: z.unknown(),
+  executionWorkspaceManifestPath: z.string().nullable().optional(),
   failureReason: z.string().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),

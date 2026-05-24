@@ -37,11 +37,16 @@ export interface Workspace {
 
 export interface Artifact {
   id: string;
+  workspaceId?: string;
+  parentArtifactId?: string | null;
+  sourceWorkflowRunId?: string | null;
+  sourceApprovalId?: string | null;
   artifactType: string;
   version: number;
   status: string;
   schemaVersion: string;
   contentJson: unknown;
+  sourceArtifactIds?: string[];
   createdAt: string;
 }
 
@@ -61,6 +66,82 @@ export interface AuditEvent {
   status: string;
   eventJson: unknown;
   createdAt: string;
+}
+
+export interface WorkflowRun {
+  id: string;
+  workflowType: string;
+  status: string;
+  inputJson: unknown;
+  outputJson: unknown | null;
+  createdAt: string;
+  completedAt: string | null;
+}
+
+export interface ExecutionRun {
+  id: string;
+  contractArtifactId: string;
+  sourceGitExecutionPlanId: string;
+  branchName: string;
+  status: string;
+  allowedFiles: string[];
+  forbiddenFiles: string[];
+  requiredTests: string[];
+  executionWorkspaceManifestPath: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BranchPreparationPlan extends Artifact {
+  artifactType: "branch_preparation_plan";
+}
+
+export interface RepoStatus {
+  currentBranch: string;
+  isClean: boolean;
+  changedFiles: string[];
+  untrackedFiles: string[];
+  stagedFiles: string[];
+  warning: string | null;
+  recommendedNextAction: string;
+}
+
+export interface ControlPlaneDashboard {
+  workspace: Workspace;
+  services: {
+    api: { status: string };
+    executor: { status: string; data?: unknown; error?: string };
+    temporal: { status: string; address: string; namespace: string; taskQueue: string };
+  };
+  readiness: {
+    executionMode: string;
+    repoClean: boolean;
+    currentBranch: string | null;
+    protectedBranchWarning: string | null;
+    repoStatus: { status: string; data: RepoStatus | null; error?: string };
+    latestPreflightStatus: string;
+    latestPreflightErrorCode: string | null;
+    readyForLiveExecution: boolean;
+  };
+  lineage: Array<{
+    key: string;
+    label: string;
+    artifactId: string | null;
+    status: string;
+    version: number | null;
+    createdAt: string | null;
+  }>;
+  workflowRuns: WorkflowRun[];
+  workflowStatusCounts: Record<string, number>;
+  artifacts: Artifact[];
+  artifactStatusCounts: Record<string, number>;
+  approvals: Approval[];
+  approvalStatusCounts: Record<string, number>;
+  executionRuns: ExecutionRun[];
+  executionRunStatusCounts: Record<string, number>;
+  auditEvents: AuditEvent[];
+  branchPreparationPlans: BranchPreparationPlan[];
+  githubIssues: Array<{ id: string; title: string; status: string; dryRun: boolean; repository: string }>;
 }
 
 export const api = {
@@ -95,4 +176,6 @@ export const api = {
       body: JSON.stringify({ rawProjectIdea }),
     }),
   listAuditEvents: (workspaceId: string) => request<AuditEvent[]>(`/workspaces/${workspaceId}/audit-events`),
+  getControlPlaneDashboard: (workspaceId: string) =>
+    request<ControlPlaneDashboard>(`/workspaces/${workspaceId}/control-plane`),
 };

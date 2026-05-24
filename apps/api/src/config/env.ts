@@ -16,6 +16,8 @@ const envSchema = z.object({
   GITHUB_TOKEN: z.string().optional().default(""),
   GITHUB_DEFAULT_REPOSITORY: z.string().optional().default(""),
   GITHUB_ISSUE_CREATION_MODE: z.enum(["dry_run", "live"]).default("dry_run"),
+  CODEX_EXECUTION_MODE: z.enum(["disabled", "dry_run", "live"]).default("disabled"),
+  EXECUTOR_URL: z.string().url().default("http://localhost:4100"),
 });
 
 export type ApiEnv = z.infer<typeof envSchema>;

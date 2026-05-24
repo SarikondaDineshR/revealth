@@ -67,8 +67,43 @@ services:
       DATABASE_URL: postgresql://revealth:revealth@postgres:5432/revealth?schema=public
       TEMPORAL_ADDRESS: temporal:7233
       API_HOST: 0.0.0.0
+      EXECUTOR_URL: http://executor:4100
     ports:
       - "4000:4000"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:4000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  executor:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.executor
+    container_name: revealth-executor
+    env_file:
+      - .env
+    environment:
+      EXECUTOR_HOST: 0.0.0.0
+      EXECUTOR_PORT: 4100
+      EXECUTOR_REPOSITORY_PATH: /workspace
+    volumes:
+      - .:/workspace
+    ports:
+      - "4100:4100"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:4100/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
 
   worker:
     build:
@@ -85,6 +120,15 @@ services:
     environment:
       DATABASE_URL: postgresql://revealth:revealth@postgres:5432/revealth?schema=public
       TEMPORAL_ADDRESS: temporal:7233
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"const fs=require('fs');try{const s=fs.statSync('/tmp/revealth-worker-ready');process.exit(Date.now()-s.mtimeMs<30000?0:1)}catch{process.exit(1)}\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
 
 volumes:
   postgres-data:

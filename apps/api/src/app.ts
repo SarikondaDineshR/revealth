@@ -8,6 +8,7 @@ import { registerApprovalRoutes } from "./routes/approvals.js";
 import { registerArtifactRoutes } from "./routes/artifacts.js";
 import { registerAuditRoutes } from "./routes/audit.js";
 import { registerCodexRoutes } from "./routes/codex.js";
+import { registerControlPlaneRoutes } from "./routes/control-plane.js";
 import { registerGithubRoutes } from "./routes/github.js";
 import { registerHealthRoutes } from "./routes/health.js";
 import { registerWorkflowRoutes } from "./routes/workflows.js";
@@ -41,6 +42,7 @@ export async function buildApp(config: ApiEnv) {
   await registerWorkflowRoutes(app);
   await registerGithubRoutes(app);
   await registerCodexRoutes(app);
+  await registerControlPlaneRoutes(app);
   await registerAuditRoutes(app);
 
   return app;

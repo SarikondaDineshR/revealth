@@ -208,6 +208,7 @@ model CodexExecutionRun {
   forbiddenCommands          String[]  @default([]) @map("forbidden_commands")
   requiredTests              String[]  @default([]) @map("required_tests")
   executionLogs              Json      @default("[]") @map("execution_logs")
+  executionWorkspaceManifestPath String? @map("execution_workspace_manifest_path")
   failureReason              String?   @map("failure_reason")
   workspace                  Workspace @relation(fields: [workspaceId], references: [id])
   createdAt                  DateTime  @default(now()) @map("created_at")

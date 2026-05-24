@@ -79,7 +79,7 @@ describe("Codex execution run planner", () => {
   it("only allows queued runs to be cancelled before running", () => {
     expect(() => assertRunCanBeCancelled("queued")).not.toThrow();
     expect(() => assertRunCanBeCancelled("running")).toThrow("Only queued");
-    expect(() => assertRunCanBeCancelled("completed")).toThrow("Only queued");
+    expect(() => assertRunCanBeCancelled("completed_dry_run")).toThrow("Only queued");
   });
 
   it("sorts unique values deterministically", () => {

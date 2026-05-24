@@ -1,4 +1,5 @@
 import { NativeConnection, Worker } from "@temporalio/worker";
+import fs from "node:fs/promises";
 import * as agentActivities from "./activities/agent.activities.js";
 import * as artifactActivities from "./activities/artifact.activities.js";
 import * as workflowActivities from "./activities/workflow.activities.js";
@@ -20,5 +21,10 @@ const worker = await Worker.create({
   },
 });
 
-await worker.run();
+const healthFile = "/tmp/revealth-worker-ready";
+await fs.writeFile(healthFile, `${new Date().toISOString()}\n`, "utf8");
+setInterval(() => {
+  void fs.writeFile(healthFile, `${new Date().toISOString()}\n`, "utf8");
+}, 10_000).unref();
 
+await worker.run();

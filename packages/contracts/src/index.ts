@@ -4,6 +4,7 @@ export * from "./approvals.js";
 export * from "./artifacts.js";
 export * from "./audit.js";
 export * from "./codex.js";
+export * from "./executor.js";
 export * from "./common.js";
 export * from "./github.js";
 export * from "./workflows.js";

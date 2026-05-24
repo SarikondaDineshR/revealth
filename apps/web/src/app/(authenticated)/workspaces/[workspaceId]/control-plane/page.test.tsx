@@ -133,12 +133,18 @@ describe("ControlPlaneDashboardView", () => {
     );
 
     expect(html).toContain("Control Plane");
+    expect(html).toContain("Demo Status");
+    expect(html).toContain("Readiness Summary");
     expect(html).toContain("Lineage");
+    expect(html).toContain("Approval Queue");
     expect(html).toContain("Executor Health");
     expect(html).toContain("Temporal Workflow Status");
     expect(html).toContain("Execution Runs");
+    expect(html).toContain("Execution Run Inspection");
     expect(html).toContain("Audit Timeline");
+    expect(html).toContain("status:success");
     expect(html).toContain("ready_for_live_execution");
     expect(html).toContain("completed_dry_run");
+    expect(html).toContain("demo smoke path complete");
   });
 });

@@ -32,3 +32,27 @@ export function dashboardReadinessLabel(input: {
   const ready = input.readyForLiveExecution ? "ready for live execution" : "not ready";
   return `${repo} | preflight ${input.latestPreflightStatus} | ${ready}`;
 }
+
+export function demoStatusLabel(input: {
+  pendingApprovals: number;
+  latestExecutionStatus: string | null;
+  githubDryRunCount: number;
+}): string {
+  if (input.pendingApprovals > 0) return `${input.pendingApprovals} approvals waiting`;
+  if (input.latestExecutionStatus === "completed_dry_run") return "demo smoke path complete";
+  if (input.githubDryRunCount > 0) return "github dry-run ready";
+  return "waiting for workflow progress";
+}
+
+export function readinessMessage(input: {
+  executionMode: string;
+  repoClean: boolean;
+  protectedBranchWarning: string | null;
+  readyForLiveExecution: boolean;
+}): string {
+  if (input.executionMode === "disabled") return "Execution starts are disabled. Dry-run mode is required for demo smoke.";
+  if (input.protectedBranchWarning) return input.protectedBranchWarning;
+  if (!input.repoClean) return "Executor repository is dirty. Clean or commit changes before future live readiness.";
+  if (input.readyForLiveExecution) return "Run is marked ready, but live execution remains intentionally blocked.";
+  return "Dry-run execution is available after an approved execution contract.";
+}

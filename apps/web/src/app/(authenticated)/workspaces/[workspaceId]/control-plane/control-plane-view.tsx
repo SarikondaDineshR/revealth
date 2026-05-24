@@ -1,7 +1,7 @@
 import Link from "next/link";
 import * as React from "react";
 import type { ControlPlaneDashboard } from "../../../../../lib/api-client";
-import { compactId, formatCountMap, statusTone } from "../../../../../lib/control-plane";
+import { compactId, demoStatusLabel, formatCountMap, readinessMessage, statusTone } from "../../../../../lib/control-plane";
 
 function Badge({ status }: { status: string }) {
   return <span className={`badge ${statusTone(status)}`}>{status}</span>;
@@ -58,6 +58,21 @@ export function ControlPlaneDashboardView({
   workspaceId: string;
 }) {
   const repoStatus = dashboard.readiness.repoStatus.data;
+  const pendingApprovals = dashboard.approvals.filter((approval) => approval.status === "pending");
+  const latestExecutionRun = dashboard.executionRuns[0] ?? null;
+  const auditStatuses = Array.from(new Set(dashboard.auditEvents.map((event) => event.status))).slice(0, 4);
+  const auditActions = Array.from(new Set(dashboard.auditEvents.map((event) => event.action))).slice(0, 4);
+  const demoStatus = demoStatusLabel({
+    pendingApprovals: pendingApprovals.length,
+    latestExecutionStatus: latestExecutionRun?.status ?? null,
+    githubDryRunCount: dashboard.githubIssues.filter((issue) => issue.dryRun).length,
+  });
+  const blockedMessage = readinessMessage({
+    executionMode: dashboard.readiness.executionMode,
+    repoClean: dashboard.readiness.repoClean,
+    protectedBranchWarning: dashboard.readiness.protectedBranchWarning,
+    readyForLiveExecution: dashboard.readiness.readyForLiveExecution,
+  });
 
   return (
     <div className="grid">
@@ -81,6 +96,10 @@ export function ControlPlaneDashboardView({
 
       <div className="status-grid">
         <div className="metric">
+          <span className="muted">Demo Status</span>
+          <strong>{demoStatus}</strong>
+        </div>
+        <div className="metric">
           <span className="muted">Executor</span>
           <Badge status={dashboard.services.executor.status} />
         </div>
@@ -97,6 +116,10 @@ export function ControlPlaneDashboardView({
           <Badge status={dashboard.readiness.readyForLiveExecution ? "ready_for_live_execution" : "not_ready"} />
         </div>
       </div>
+
+      <Section title="Readiness Summary">
+        <p className={dashboard.readiness.readyForLiveExecution ? "notice" : "notice bad"}>{blockedMessage}</p>
+      </Section>
 
       <Section title="Lineage">
         <Lineage dashboard={dashboard} />
@@ -172,6 +195,19 @@ export function ControlPlaneDashboardView({
       </div>
 
       <div className="grid two">
+        <Section title="Approval Queue">
+          <div className="table-list">
+            {pendingApprovals.slice(0, 8).map((approval) => (
+              <div className="row" key={approval.id}>
+                <span>{compactId(approval.artifactId)}</span>
+                <Badge status={approval.status} />
+                <span className="muted">v{approval.artifactVersion}</span>
+              </div>
+            ))}
+            {pendingApprovals.length === 0 ? <p className="muted">No approvals waiting.</p> : null}
+          </div>
+        </Section>
+
         <Section title="Approvals">
           <CountStrip counts={dashboard.approvalStatusCounts} />
           <div className="table-list">
@@ -200,6 +236,25 @@ export function ControlPlaneDashboardView({
       </div>
 
       <div className="grid two">
+        <Section title="Execution Run Inspection">
+          {latestExecutionRun ? (
+            <div className="detail-grid">
+              <span>Status</span>
+              <Badge status={latestExecutionRun.status} />
+              <span>Branch</span>
+              <strong>{latestExecutionRun.branchName}</strong>
+              <span>Contract</span>
+              <strong>{compactId(latestExecutionRun.contractArtifactId)}</strong>
+              <span>Manifest</span>
+              <strong>{latestExecutionRun.executionWorkspaceManifestPath ?? "not prepared"}</strong>
+              <span>Required tests</span>
+              <strong>{latestExecutionRun.requiredTests.length}</strong>
+            </div>
+          ) : (
+            <p className="muted">No execution runs yet.</p>
+          )}
+        </Section>
+
         <Section title="Branch Preparation Plans">
           <div className="table-list">
             {dashboard.branchPreparationPlans.slice(0, 8).map((artifact) => (
@@ -218,6 +273,18 @@ export function ControlPlaneDashboardView({
         </Section>
 
         <Section title="Audit Timeline">
+          <div className="filter-strip" aria-label="Audit timeline filters">
+            {auditStatuses.map((status) => (
+              <span className="filter-chip" key={status}>
+                status:{status}
+              </span>
+            ))}
+            {auditActions.map((action) => (
+              <span className="filter-chip" key={action}>
+                action:{action}
+              </span>
+            ))}
+          </div>
           <div className="timeline">
             {dashboard.auditEvents.slice(0, 12).map((event) => (
               <div className="timeline-item" key={event.id}>

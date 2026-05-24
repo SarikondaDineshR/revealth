@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compactId, dashboardReadinessLabel, formatCountMap, statusTone } from "./control-plane";
+import { compactId, dashboardReadinessLabel, demoStatusLabel, formatCountMap, readinessMessage, statusTone } from "./control-plane";
 
 describe("control plane UI helpers", () => {
   it("maps operational statuses to tones", () => {
@@ -27,5 +27,22 @@ describe("control plane UI helpers", () => {
         readyForLiveExecution: false,
       }),
     ).toBe("repo dirty | preflight failed | not ready");
+  });
+
+  it("summarizes demo status and blocked readiness messages", () => {
+    expect(demoStatusLabel({ pendingApprovals: 2, latestExecutionStatus: null, githubDryRunCount: 0 })).toBe(
+      "2 approvals waiting",
+    );
+    expect(demoStatusLabel({ pendingApprovals: 0, latestExecutionStatus: "completed_dry_run", githubDryRunCount: 1 })).toBe(
+      "demo smoke path complete",
+    );
+    expect(
+      readinessMessage({
+        executionMode: "disabled",
+        repoClean: true,
+        protectedBranchWarning: null,
+        readyForLiveExecution: false,
+      }),
+    ).toContain("disabled");
   });
 });

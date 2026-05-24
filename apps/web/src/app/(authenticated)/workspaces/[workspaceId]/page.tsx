@@ -17,6 +17,9 @@ export default async function WorkspacePage({ params }: { params: { workspaceId:
           <p className="muted">{params.workspaceId}</p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
+          <Link className="button secondary" href={{ pathname: `/workspaces/${params.workspaceId}/company` }}>
+            AI company
+          </Link>
           <Link className="button secondary" href={{ pathname: `/workspaces/${params.workspaceId}/control-plane` }}>
             Control plane
           </Link>

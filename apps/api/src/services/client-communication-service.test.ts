@@ -10,6 +10,7 @@ function createDb() {
     leads: [] as Record<string, unknown>[],
     conversations: [] as Record<string, unknown>[],
     meetingRequests: [] as Record<string, unknown>[],
+    policies: [] as Record<string, unknown>[],
     artifacts: [] as Record<string, unknown>[],
     approvals: [] as Record<string, unknown>[],
     audits: [] as Record<string, unknown>[],
@@ -64,8 +65,37 @@ function createDb() {
           return request;
         },
       },
+      externalCommunicationPolicy: {
+        findMany: async ({ where }: { where: { workspaceId: string } }) =>
+          state.policies.filter((policy) => policy.workspaceId === where.workspaceId),
+        findFirst: async ({ where }: { where: Record<string, unknown> }) =>
+          state.policies.find(
+            (policy) =>
+              policy.workspaceId === where.workspaceId &&
+              policy.allowedChannel === where.allowedChannel &&
+              policy.clientProfileId === where.clientProfileId &&
+              policy.leadId === where.leadId &&
+              policy.status === where.status,
+          ) ?? null,
+        create: async ({ data }: { data: Record<string, unknown> }) => {
+          const policy = { id: `policy-${state.policies.length + 1}`, createdAt: new Date(), ...data };
+          state.policies.push(policy);
+          return policy;
+        },
+      },
       artifact: {
-        findFirst: async () => state.artifacts.at(-1) ?? null,
+        findFirst: async ({ where }: { where?: Record<string, unknown> } = {}) => {
+          if (!where) return state.artifacts.at(-1) ?? null;
+          return (
+            state.artifacts.find(
+              (artifact) =>
+                (!where.id || artifact.id === where.id) &&
+                (!where.workspaceId || artifact.workspaceId === where.workspaceId) &&
+                (!where.artifactType || artifact.artifactType === where.artifactType) &&
+                (!where.status || artifact.status === where.status),
+            ) ?? null
+          );
+        },
         create: async ({ data }: { data: Record<string, unknown> }) => {
           const artifact = { id: `33333333-3333-4333-8333-00000000000${state.artifacts.length + 1}`, createdAt: new Date(), ...data };
           state.artifacts.push(artifact);
@@ -83,6 +113,14 @@ function createDb() {
           state.approvals.push(approval);
           return approval;
         },
+        findFirst: async ({ where }: { where: Record<string, unknown> }) =>
+          state.approvals.find(
+            (approval) =>
+              approval.workspaceId === where.workspaceId &&
+              approval.artifactId === where.artifactId &&
+              approval.artifactVersion === where.artifactVersion &&
+              approval.status === where.status,
+          ) ?? null,
       },
       auditLog: {
         create: async ({ data }: { data: Record<string, unknown> }) => {
@@ -197,5 +235,52 @@ describe("ClientCommunicationService", () => {
     const visible = await service.listConversations(workspaceId, "client_visible");
     expect(visible).toHaveLength(1);
     expect(visible[0]).toMatchObject({ visibility: "client_visible" });
+  });
+
+  it("blocks external communication by default and writes policy audit evidence", async () => {
+    const { db, state } = createDb();
+    const service = new ClientCommunicationService(db as never);
+    const client = await service.createClient({
+      workspaceId,
+      actorId,
+      body: { name: "Katherine Johnson", company: "Orbital Math", status: "lead", source: "demo", notes: "Demo client." },
+    });
+    const lead = await service.createLead({
+      workspaceId,
+      actorId,
+      body: {
+        clientProfileId: client.id,
+        title: "Operations dashboard",
+        needSummary: "Needs policy-gated client communication.",
+        urgency: "high",
+        stage: "discovery",
+        ownerAgentRole: "Sales Agent",
+      },
+    });
+    const script = await service.generateClientCommunicationScript({ workspaceId, leadId: lead.id, actorId });
+
+    const evaluation = await service.evaluateExternalCommunicationPolicy({
+      workspaceId,
+      actorId,
+      body: {
+        channel: "email_draft",
+        clientProfileId: client.id,
+        leadId: lead.id,
+        scriptArtifactId: script.id,
+      },
+    });
+
+    expect(evaluation.allowed).toBe(false);
+    expect(evaluation.blockers).toEqual(
+      expect.arrayContaining([
+        "approved_client_communication_script_required",
+        "approved_client_required",
+        "approved_lead_required",
+        "consent_granted_required",
+      ]),
+    );
+    expect(evaluation.requiredConsent).toHaveLength(1);
+    expect(state.policies).toHaveLength(1);
+    expect(state.audits.map((audit) => audit.action)).toContain("external_communication_policy.evaluated");
   });
 });

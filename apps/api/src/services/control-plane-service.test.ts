@@ -88,6 +88,13 @@ describe("ControlPlaneService aggregation", () => {
             errorCode: null,
             createdAt: new Date(),
           },
+          {
+            id: "audit-2",
+            action: "external_communication_policy.evaluated",
+            status: "blocked",
+            errorCode: null,
+            createdAt: new Date(),
+          },
         ],
       },
       gitHubIssue: { findMany: async () => [{ id: "issue-1", status: "dry_run", dryRun: true }] },
@@ -195,6 +202,21 @@ describe("ControlPlaneService aggregation", () => {
           },
         ],
       },
+      externalCommunicationPolicy: {
+        findMany: async () => [
+          {
+            id: "policy-1",
+            allowedChannel: "email_draft",
+            consentState: "unknown",
+            clientApproved: false,
+            leadApproved: false,
+            ownerApprovalRequired: true,
+            auditRequired: true,
+            status: "active",
+            notes: "Blocked until consent and approvals exist.",
+          },
+        ],
+      },
     };
     const service = new ControlPlaneService(
       db as never,
@@ -241,6 +263,8 @@ describe("ControlPlaneService aggregation", () => {
     expect(dashboard.meetingRequests).toHaveLength(1);
     expect(dashboard.meetingRequestStatusCounts).toEqual({ pending_approval: 1 });
     expect(dashboard.clientCommunicationScripts).toHaveLength(1);
+    expect(dashboard.externalCommunicationPolicies).toHaveLength(1);
+    expect(dashboard.latestExternalCommunicationPolicyEvaluation?.status).toBe("blocked");
     expect(dashboard.workflowStatusCounts).toEqual({ completed: 1 });
   });
 });

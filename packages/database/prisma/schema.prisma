@@ -35,6 +35,7 @@ model Workspace {
   clientLeads ClientLead[]
   clientConversations ClientConversation[]
   meetingRequests MeetingRequest[]
+  externalCommunicationPolicies ExternalCommunicationPolicy[]
   tasks       Task[]
   codexExecutionRuns CodexExecutionRun[]
   auditLogs   AuditLog[]
@@ -273,6 +274,29 @@ model MeetingRequest {
   @@index([workspaceId, status])
   @@index([workspaceId, clientProfileId])
   @@map("meeting_requests")
+}
+
+model ExternalCommunicationPolicy {
+  id                    String    @id @default(uuid()) @db.Uuid
+  workspaceId           String    @map("workspace_id") @db.Uuid
+  clientProfileId       String?   @map("client_profile_id") @db.Uuid
+  leadId                String?   @map("lead_id") @db.Uuid
+  allowedChannel        String    @map("allowed_channel")
+  consentState          String    @map("consent_state")
+  clientApproved        Boolean   @default(false) @map("client_approved")
+  leadApproved          Boolean   @default(false) @map("lead_approved")
+  ownerApprovalRequired Boolean   @default(true) @map("owner_approval_required")
+  auditRequired         Boolean   @default(true) @map("audit_required")
+  status                String
+  notes                 String
+  workspace             Workspace @relation(fields: [workspaceId], references: [id])
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  @@index([workspaceId, allowedChannel])
+  @@index([workspaceId, clientProfileId])
+  @@index([workspaceId, leadId])
+  @@map("external_communication_policies")
 }
 
 model Task {

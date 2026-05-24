@@ -45,6 +45,34 @@ export const createMeetingRequestSchema = z.object({
   consentRequired: z.boolean().default(true),
 });
 
+export const communicationChannelSchema = z.enum(["simulated_only", "email_draft", "meeting_draft", "voice_draft"]);
+export const consentStateSchema = z.enum(["unknown", "required", "granted", "revoked"]);
+
+export const evaluateExternalCommunicationPolicySchema = z.object({
+  channel: communicationChannelSchema,
+  clientProfileId: z.string().uuid().optional(),
+  leadId: z.string().uuid().optional(),
+  scriptArtifactId: z.string().uuid().optional(),
+});
+
+type PolicyEvaluation = {
+  allowed: boolean;
+  blockers: string[];
+  requiredApprovals: string[];
+  requiredConsent: string[];
+  nextSafeAction: string;
+  policy: {
+    id: string;
+    allowedChannel: z.infer<typeof communicationChannelSchema>;
+    consentState: z.infer<typeof consentStateSchema>;
+    clientApproved: boolean;
+    leadApproved: boolean;
+    ownerApprovalRequired: boolean;
+    auditRequired: boolean;
+    status: string;
+  };
+};
+
 export class ClientCommunicationService {
   private readonly audit: AuditService;
 
@@ -349,6 +377,151 @@ export class ClientCommunicationService {
     return pendingArtifact;
   }
 
+  listExternalCommunicationPolicies(workspaceId: string) {
+    return this.db.externalCommunicationPolicy.findMany({
+      where: { workspaceId },
+      orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+      take: 50,
+    });
+  }
+
+  async evaluateExternalCommunicationPolicy(input: {
+    workspaceId: string;
+    actorId: string;
+    body: z.input<typeof evaluateExternalCommunicationPolicySchema>;
+  }): Promise<PolicyEvaluation> {
+    await this.assertWorkspace(input.workspaceId);
+    const body = evaluateExternalCommunicationPolicySchema.parse(input.body);
+    const blockers: string[] = [];
+    const requiredApprovals: string[] = [];
+    const requiredConsent: string[] = [];
+
+    let policy = await this.db.externalCommunicationPolicy.findFirst({
+      where: {
+        workspaceId: input.workspaceId,
+        allowedChannel: body.channel,
+        clientProfileId: body.clientProfileId ?? null,
+        leadId: body.leadId ?? null,
+        status: "active",
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (!policy) {
+      policy = await this.db.externalCommunicationPolicy.create({
+        data: {
+          workspaceId: input.workspaceId,
+          clientProfileId: body.clientProfileId ?? null,
+          leadId: body.leadId ?? null,
+          allowedChannel: body.channel,
+          consentState: "unknown",
+          clientApproved: false,
+          leadApproved: false,
+          ownerApprovalRequired: true,
+          auditRequired: true,
+          status: "active",
+          notes: "Default blocked policy created by policy evaluation. External communication remains disabled until reviewed.",
+        },
+      });
+    }
+
+    if (body.clientProfileId) await this.assertClient(input.workspaceId, body.clientProfileId);
+    if (body.leadId) await this.assertLead(input.workspaceId, body.leadId);
+
+    const approvedScript = body.scriptArtifactId
+      ? await this.db.artifact.findFirst({
+          where: {
+            id: body.scriptArtifactId,
+            workspaceId: input.workspaceId,
+            artifactType: "client_communication_script",
+            status: "approved",
+          },
+        })
+      : null;
+    const approvedScriptApproval = approvedScript
+      ? await this.db.approval.findFirst({
+          where: {
+            workspaceId: input.workspaceId,
+            artifactId: approvedScript.id,
+            artifactVersion: approvedScript.version,
+            status: "approved",
+          },
+          orderBy: { decidedAt: "desc" },
+        })
+      : null;
+
+    if (!approvedScript || !approvedScriptApproval) {
+      blockers.push("approved_client_communication_script_required");
+      requiredApprovals.push("Approve a client_communication_script artifact before any future communication action.");
+    }
+    if (!policy.clientApproved) {
+      blockers.push("approved_client_required");
+      requiredApprovals.push("Approve the client profile for external communication readiness.");
+    }
+    if (!policy.leadApproved) {
+      blockers.push("approved_lead_required");
+      requiredApprovals.push("Approve the lead/opportunity for external communication readiness.");
+    }
+    if (body.channel !== "simulated_only" && policy.consentState !== "granted") {
+      blockers.push("consent_granted_required");
+      requiredConsent.push(`Client consent must be granted before ${body.channel} can be considered.`);
+    }
+    if (policy.ownerApprovalRequired && !approvedScriptApproval) {
+      blockers.push("owner_approval_required");
+    }
+    if (!policy.auditRequired) {
+      blockers.push("audit_required");
+    }
+
+    const allowed = blockers.length === 0;
+    const nextSafeAction = allowed
+      ? "Proceed only to the next approved draft step. Do not send, schedule, call, or join externally."
+      : "Keep communication internal. Resolve approvals and consent before any external channel is reconsidered.";
+
+    const evaluation: PolicyEvaluation = {
+      allowed,
+      blockers: Array.from(new Set(blockers)),
+      requiredApprovals: Array.from(new Set(requiredApprovals)),
+      requiredConsent: Array.from(new Set(requiredConsent)),
+      nextSafeAction,
+      policy: {
+        id: policy.id,
+        allowedChannel: communicationChannelSchema.parse(policy.allowedChannel),
+        consentState: consentStateSchema.parse(policy.consentState),
+        clientApproved: policy.clientApproved,
+        leadApproved: policy.leadApproved,
+        ownerApprovalRequired: policy.ownerApprovalRequired,
+        auditRequired: policy.auditRequired,
+        status: policy.status,
+      },
+    };
+
+    await this.audit.append({
+      workspaceId: input.workspaceId,
+      actorType: "human",
+      actorId: input.actorId,
+      action: "external_communication_policy.evaluated",
+      sourceArtifactIds: body.scriptArtifactId ? [body.scriptArtifactId] : [],
+      targetArtifactIds: body.scriptArtifactId ? [body.scriptArtifactId] : [],
+      approvalId: approvedScriptApproval?.id ?? undefined,
+      status: allowed ? "success" : "blocked",
+      eventJson: {
+        channel: body.channel,
+        clientProfileId: body.clientProfileId ?? null,
+        leadId: body.leadId ?? null,
+        scriptArtifactId: body.scriptArtifactId ?? null,
+        allowed,
+        blockers: evaluation.blockers,
+        requiredApprovals: evaluation.requiredApprovals,
+        requiredConsent: evaluation.requiredConsent,
+        nextSafeAction,
+        policyId: policy.id,
+      },
+    });
+
+    return evaluation;
+  }
+
   private async assertWorkspace(workspaceId: string) {
     const workspace = await this.db.workspace.findUnique({ where: { id: workspaceId } });
     if (!workspace) {
@@ -365,6 +538,16 @@ export class ClientCommunicationService {
       throw Object.assign(new Error("Client profile not found."), {
         statusCode: 404,
         code: "CLIENT_PROFILE_NOT_FOUND",
+      });
+    }
+  }
+
+  private async assertLead(workspaceId: string, leadId: string) {
+    const lead = await this.db.clientLead.findFirst({ where: { id: leadId, workspaceId } });
+    if (!lead) {
+      throw Object.assign(new Error("Lead not found."), {
+        statusCode: 404,
+        code: "LEAD_NOT_FOUND",
       });
     }
   }

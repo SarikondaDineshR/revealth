@@ -5,6 +5,7 @@ import {
   createClientConversationSchema,
   createClientLeadSchema,
   createClientProfileSchema,
+  evaluateExternalCommunicationPolicySchema,
   createMeetingRequestSchema,
 } from "../services/client-communication-service.js";
 
@@ -70,6 +71,17 @@ export async function registerClientCommunicationRoutes(app: FastifyInstance): P
       workspaceId,
       leadId,
       actorId: request.actor.id,
+    });
+    return { data, error: null, requestId: request.requestId };
+  });
+
+  app.post("/workspaces/:workspaceId/client-communication/policy/evaluate", async (request) => {
+    const { workspaceId } = request.params as { workspaceId: string };
+    const body = evaluateExternalCommunicationPolicySchema.parse(request.body ?? {});
+    const data = await service.evaluateExternalCommunicationPolicy({
+      workspaceId,
+      actorId: request.actor.id,
+      body,
     });
     return { data, error: null, requestId: request.requestId };
   });

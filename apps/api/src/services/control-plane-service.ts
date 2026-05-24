@@ -82,6 +82,7 @@ export class ControlPlaneService {
       leads,
       clientConversations,
       meetingRequests,
+      externalCommunicationPolicies,
       executorHealth,
       executorRepoStatus,
     ] = await Promise.all([
@@ -98,6 +99,7 @@ export class ControlPlaneService {
       this.db.clientLead.findMany({ where: { workspaceId }, include: { clientProfile: true }, orderBy: [{ stage: "asc" }, { createdAt: "desc" }], take: 50 }),
       this.db.clientConversation.findMany({ where: { workspaceId }, include: { clientProfile: true }, orderBy: { createdAt: "desc" }, take: 100 }),
       this.db.meetingRequest.findMany({ where: { workspaceId }, include: { clientProfile: true }, orderBy: [{ status: "asc" }, { createdAt: "desc" }], take: 50 }),
+      this.db.externalCommunicationPolicy.findMany({ where: { workspaceId }, orderBy: [{ status: "asc" }, { createdAt: "desc" }], take: 50 }),
       this.getExecutorHealth(),
       this.getExecutorRepoStatus(),
     ]);
@@ -112,6 +114,9 @@ export class ControlPlaneService {
     const latestExecutionRun = executionRuns[0] ?? null;
     const latestPreflight = auditEvents.find((event: AuditLog) =>
       event.action === "codex.execution_run.preflight.passed" || event.action === "codex.execution_run.preflight.failed",
+    );
+    const latestExternalCommunicationPolicyEvaluation = auditEvents.find(
+      (event: AuditLog) => event.action === "external_communication_policy.evaluated",
     );
 
     return {
@@ -164,6 +169,8 @@ export class ControlPlaneService {
       meetingRequests,
       meetingRequestStatusCounts: countByStatus(meetingRequests),
       clientCommunicationScripts,
+      externalCommunicationPolicies,
+      latestExternalCommunicationPolicyEvaluation,
       githubIssues,
       agentAssignments,
       agentMessages,

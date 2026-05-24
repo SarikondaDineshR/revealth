@@ -134,6 +134,15 @@ const dashboard: ControlPlaneDashboard = {
       eventJson: {},
       createdAt: "2026-05-23T00:00:00.000Z",
     },
+    {
+      id: "audit-2",
+      action: "external_communication_policy.evaluated",
+      actorType: "human",
+      actorId: "owner",
+      status: "blocked",
+      eventJson: {},
+      createdAt: "2026-05-23T00:00:00.000Z",
+    },
   ],
   branchPreparationPlans: [],
   workforceScalingPlans: [
@@ -353,6 +362,32 @@ const dashboard: ControlPlaneDashboard = {
       createdAt: "2026-05-23T00:00:00.000Z",
     },
   ],
+  externalCommunicationPolicies: [
+    {
+      id: "policy-1",
+      workspaceId: "workspace-1",
+      clientProfileId: "client-1",
+      leadId: "lead-1",
+      allowedChannel: "email_draft",
+      consentState: "unknown",
+      clientApproved: false,
+      leadApproved: false,
+      ownerApprovalRequired: true,
+      auditRequired: true,
+      status: "active",
+      notes: "Blocked until consent and approvals exist.",
+      createdAt: "2026-05-23T00:00:00.000Z",
+    },
+  ],
+  latestExternalCommunicationPolicyEvaluation: {
+    id: "audit-2",
+    action: "external_communication_policy.evaluated",
+    actorType: "human",
+    actorId: "owner",
+    status: "blocked",
+    eventJson: {},
+    createdAt: "2026-05-23T00:00:00.000Z",
+  },
 };
 
 describe("ControlPlaneDashboardView", () => {
@@ -376,6 +411,9 @@ describe("ControlPlaneDashboardView", () => {
     expect(html).toContain("Client Communication Feed");
     expect(html).toContain("Meeting Requests");
     expect(html).toContain("Sales/Support Script Drafts");
+    expect(html).toContain("External Communication Readiness");
+    expect(html).toContain("Blocked by default");
+    expect(html).toContain("email_draft");
     expect(html).toContain("Analytical Engines LLC");
     expect(html).toContain("No external joining");
     expect(html).toContain("QA Agent");

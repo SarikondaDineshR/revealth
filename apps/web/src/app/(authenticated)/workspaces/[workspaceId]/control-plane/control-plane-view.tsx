@@ -268,6 +268,35 @@ export function ControlPlaneDashboardView({
         </div>
       </Section>
 
+      <Section title="External Communication Readiness">
+        <div className="detail-grid">
+          <span>Policy records</span>
+          <strong>{dashboard.externalCommunicationPolicies.length}</strong>
+          <span>Latest evaluation</span>
+          <Badge status={dashboard.latestExternalCommunicationPolicyEvaluation?.status ?? "not_run"} />
+          <span>External channels</span>
+          <strong>Blocked by default</strong>
+          <span>Next safe action</span>
+          <strong>
+            {dashboard.latestExternalCommunicationPolicyEvaluation
+              ? "Resolve approvals and consent before any external channel."
+              : "Run policy evaluation before considering communication outside Revealth."}
+          </strong>
+        </div>
+        <div className="table-list">
+          {dashboard.externalCommunicationPolicies.slice(0, 6).map((policy) => (
+            <div className="row" key={policy.id}>
+              <span>{policy.allowedChannel}</span>
+              <Badge status={policy.consentState} />
+              <span className="muted">{policy.notes}</span>
+            </div>
+          ))}
+          {dashboard.externalCommunicationPolicies.length === 0 ? (
+            <p className="muted">No external communication policy has been evaluated yet.</p>
+          ) : null}
+        </div>
+      </Section>
+
       <div className="grid two">
         <Section title="Recommended AI Team Scaling">
           {latestWorkforcePlan && workforceContent ? (

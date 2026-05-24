@@ -211,6 +211,22 @@ export interface ClientCommunicationScript extends Artifact {
   };
 }
 
+export interface ExternalCommunicationPolicy {
+  id: string;
+  workspaceId: string;
+  clientProfileId: string | null;
+  leadId: string | null;
+  allowedChannel: "simulated_only" | "email_draft" | "meeting_draft" | "voice_draft";
+  consentState: "unknown" | "required" | "granted" | "revoked";
+  clientApproved: boolean;
+  leadApproved: boolean;
+  ownerApprovalRequired: boolean;
+  auditRequired: boolean;
+  status: string;
+  notes: string;
+  createdAt: string;
+}
+
 export interface RepoStatus {
   currentBranch: string;
   isClean: boolean;
@@ -273,6 +289,8 @@ export interface ControlPlaneDashboard {
   meetingRequests: MeetingRequest[];
   meetingRequestStatusCounts: Record<string, number>;
   clientCommunicationScripts: ClientCommunicationScript[];
+  externalCommunicationPolicies: ExternalCommunicationPolicy[];
+  latestExternalCommunicationPolicyEvaluation: AuditEvent | null;
 }
 
 export const api = {

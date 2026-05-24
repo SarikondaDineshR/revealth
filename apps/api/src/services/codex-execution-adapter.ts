@@ -6,6 +6,7 @@ import { codexExecutionContractSchema } from "@revealth/contracts";
 import type { DatabaseClient } from "@revealth/database";
 import type { ApiEnv } from "../config/env.js";
 import { AuditService } from "./audit-service.js";
+import { extractRunSnapshot } from "./codex-execution-run-planner.js";
 import { ExecutorClient } from "./executor-client.js";
 
 export type CodexExecutionRunStartStatus = "queued" | "running" | "completed_dry_run" | "failed" | "cancelled";
@@ -108,8 +109,9 @@ export class SandboxedCodexExecutionAdapter implements CodexExecutionAdapter {
       });
     }
 
-    codexExecutionContractSchema.parse(contractArtifact.contentJson);
+    const contract = codexExecutionContractSchema.parse(contractArtifact.contentJson);
     this.validateSafetySnapshot(run);
+    this.validateImmutableContractSnapshot(run, contract);
 
     await this.audit.append({
       workspaceId: run.workspaceId,
@@ -261,7 +263,7 @@ export class SandboxedCodexExecutionAdapter implements CodexExecutionAdapter {
         mode: this.env.CODEX_EXECUTION_MODE,
       },
     });
-    throw Object.assign(new Error("Live Codex execution is not implemented."), {
+    throw Object.assign(new Error("Live Codex execution is intentionally blocked and not implemented."), {
       statusCode: 409,
       code: "CODEX_LIVE_EXECUTION_NOT_IMPLEMENTED",
     });
@@ -390,10 +392,11 @@ export class SandboxedCodexExecutionAdapter implements CodexExecutionAdapter {
     );
     if (contractArtifact) {
       try {
-        codexExecutionContractSchema.parse(contractArtifact.contentJson);
+        const contract = codexExecutionContractSchema.parse(contractArtifact.contentJson);
+        this.validateImmutableContractSnapshot(run, contract);
         push(this.info("contract.schema", "CODEX_CONTRACT_SCHEMA_VALID", "Contract schema is valid."));
       } catch (error) {
-        push(this.blocker("contract.schema", "CODEX_CONTRACT_SCHEMA_INVALID", "Contract schema validation failed.", {
+        push(this.blocker("contract.schema", this.errorCode(error, "CODEX_CONTRACT_SCHEMA_INVALID"), "Contract schema validation failed.", {
           message: error instanceof Error ? error.message : "Unknown schema failure.",
         }));
       }
@@ -492,6 +495,14 @@ export class SandboxedCodexExecutionAdapter implements CodexExecutionAdapter {
     const allowedDirectories = run.allowedFiles
       .filter((file) => file.endsWith("/"))
       .map((file) => this.normalizeRepoPath(file));
+    const wildcardAllowedFiles = run.allowedFiles.filter((file) => this.normalizeRepoPath(file).includes("*"));
+    if (wildcardAllowedFiles.length > 0) {
+      throw Object.assign(new Error("Allowed files must be exact repository-relative files or directories."), {
+        statusCode: 409,
+        code: "CODEX_ALLOWED_FILE_WILDCARD_REJECTED",
+        details: { wildcardAllowedFiles },
+      });
+    }
     const fileEntriesOutsideAllowedDirectories = run.allowedFiles
       .filter((file) => !file.endsWith("/"))
       .filter((file) => allowedDirectories.length > 0 && !this.isInsideAllowedDirectory(file, allowedDirectories));
@@ -600,6 +611,26 @@ export class SandboxedCodexExecutionAdapter implements CodexExecutionAdapter {
     };
 
     if (run) {
+      const existingLogs = this.readLogs(run);
+      await this.db.codexExecutionRun.update({
+        where: { id: run.id },
+        data: {
+          executionLogs: [
+            ...existingLogs,
+            {
+              level: passed ? "info" : "warn",
+              message: passed ? "Codex preflight passed." : "Codex preflight failed.",
+              at: new Date().toISOString(),
+              metadata: {
+                passed,
+                blockers,
+                warnings,
+                nextAllowedAction: report.nextAllowedAction,
+              },
+            },
+          ] as Prisma.InputJsonArray,
+        },
+      });
       await this.audit.append({
         workspaceId: run.workspaceId,
         actorType: "system",
@@ -678,10 +709,17 @@ export class SandboxedCodexExecutionAdapter implements CodexExecutionAdapter {
   }
 
   private assertSafeCommand(value: string): void {
-    if (value.trim().length === 0) {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
       throw Object.assign(new Error("Execution contract commands cannot be empty."), {
         statusCode: 409,
         code: "CODEX_EMPTY_COMMAND_REJECTED",
+      });
+    }
+    if (/[;&|<>`]/.test(trimmed) || trimmed.includes("$(")) {
+      throw Object.assign(new Error("Execution contract commands cannot include shell control operators."), {
+        statusCode: 409,
+        code: "CODEX_UNSAFE_COMMAND_OPERATOR_REJECTED",
       });
     }
   }
@@ -726,5 +764,32 @@ export class SandboxedCodexExecutionAdapter implements CodexExecutionAdapter {
       regex += char.replace(/[.+^${}()|[\]\\]/g, "\\$&");
     }
     return regex;
+  }
+
+  private validateImmutableContractSnapshot(
+    run: CodexExecutionRun,
+    contract: ReturnType<typeof codexExecutionContractSchema.parse>,
+  ): void {
+    const snapshot = extractRunSnapshot(contract);
+    const mismatches = [
+      snapshot.sourceGitExecutionPlanId === run.sourceGitExecutionPlanId ? null : "sourceGitExecutionPlanId",
+      snapshot.branchName === run.branchName ? null : "branchName",
+      this.sameList(snapshot.allowedFiles, run.allowedFiles) ? null : "allowedFiles",
+      this.sameList(snapshot.forbiddenFiles, run.forbiddenFiles) ? null : "forbiddenFiles",
+      this.sameList(snapshot.allowedCommands, run.allowedCommands) ? null : "allowedCommands",
+      this.sameList(snapshot.forbiddenCommands, run.forbiddenCommands) ? null : "forbiddenCommands",
+      this.sameList(snapshot.requiredTests, run.requiredTests) ? null : "requiredTests",
+    ].filter(Boolean);
+    if (mismatches.length > 0) {
+      throw Object.assign(new Error("Codex execution run safety snapshot no longer matches the approved contract."), {
+        statusCode: 409,
+        code: "CODEX_CONTRACT_SNAPSHOT_MISMATCH",
+        details: { mismatches },
+      });
+    }
+  }
+
+  private sameList(left: string[], right: string[]): boolean {
+    return left.length === right.length && left.every((value, index) => value === right[index]);
   }
 }

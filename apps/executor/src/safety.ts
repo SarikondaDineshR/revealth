@@ -20,9 +20,15 @@ export function assertSafeRepoPath(value: string): void {
 }
 
 export function assertSafeCommand(value: string): void {
-  if (value.trim().length === 0) {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
     throw Object.assign(new Error("Execution contract commands cannot be empty."), {
       code: "CODEX_EMPTY_COMMAND_REJECTED",
+    });
+  }
+  if (/[;&|<>`]/.test(trimmed) || trimmed.includes("$(")) {
+    throw Object.assign(new Error("Execution contract commands cannot include shell control operators."), {
+      code: "CODEX_UNSAFE_COMMAND_OPERATOR_REJECTED",
     });
   }
 }
@@ -44,6 +50,13 @@ export function validateSafetySnapshot(input: {
   const allowedDirectories = input.allowedFiles
     .filter((file) => file.endsWith("/"))
     .map((file) => normalizeRepoPath(file));
+  const wildcardAllowedFiles = input.allowedFiles.filter((file) => normalizeRepoPath(file).includes("*"));
+  if (wildcardAllowedFiles.length > 0) {
+    throw Object.assign(new Error("Allowed files must be exact repository-relative files or directories."), {
+      code: "CODEX_ALLOWED_FILE_WILDCARD_REJECTED",
+      details: { wildcardAllowedFiles },
+    });
+  }
   const outsideAllowed = input.allowedFiles
     .filter((file) => !file.endsWith("/"))
     .filter((file) => allowedDirectories.length > 0 && !isInsideAllowedDirectory(file, allowedDirectories));

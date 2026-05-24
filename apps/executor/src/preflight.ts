@@ -72,6 +72,7 @@ export class ExecutorPreflightService {
 
     try {
       const manifestPath = await this.writeManifest(runId, input);
+      await this.verifyManifest(manifestPath, runId, input);
       checks.push(info("workspace.manifest", "CODEX_EXECUTION_MANIFEST_CREATED", "Execution workspace manifest can be created.", { manifestPath }));
     } catch (error) {
       checks.push(blocker("workspace.manifest", errorCode(error, "CODEX_EXECUTION_MANIFEST_FAILED"), error instanceof Error ? error.message : "Manifest creation failed."));
@@ -170,6 +171,36 @@ export class ExecutorPreflightService {
     );
     return manifestPath;
   }
+
+  private async verifyManifest(manifestPath: string, runId: string, input: ExecutorPreflightRequest): Promise<void> {
+    const absoluteManifestPath = path.resolve(this.repositoryPath, manifestPath);
+    const parsed = JSON.parse(await fs.readFile(absoluteManifestPath, "utf8")) as {
+      runId?: string;
+      workspaceId?: string;
+      sourceContractId?: string;
+      allowedFiles?: string[];
+      forbiddenFiles?: string[];
+      branchName?: string;
+      mode?: string;
+    };
+    const valid =
+      parsed.runId === runId &&
+      parsed.workspaceId === input.workspaceId &&
+      parsed.sourceContractId === input.contractArtifactId &&
+      parsed.branchName === input.branchName &&
+      parsed.mode === input.mode &&
+      sameList(parsed.allowedFiles ?? [], input.allowedFiles) &&
+      sameList(parsed.forbiddenFiles ?? [], input.forbiddenFiles);
+    if (!valid) {
+      throw Object.assign(new Error("Execution workspace manifest failed integrity verification."), {
+        code: "CODEX_EXECUTION_MANIFEST_INTEGRITY_FAILED",
+      });
+    }
+  }
+}
+
+function sameList(left: string[], right: string[]): boolean {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
 function nextAllowedAction(mode: ExecutorPreflightRequest["mode"], passed: boolean): ExecutorPreflightReport["nextAllowedAction"] {

@@ -95,4 +95,25 @@ describe("Executor preflight service", () => {
     expect(report.passed).toBe(false);
     expect(report.blockers).toContain("CODEX_PATH_TRAVERSAL_REJECTED");
   });
+
+  it("rejects wildcard allowed file scopes", async () => {
+    const service = new ExecutorPreflightService(tempRepo, runner());
+
+    const report = await service.run("run-1", { ...request, allowedFiles: ["apps/api/src/**/*.ts"] });
+
+    expect(report.passed).toBe(false);
+    expect(report.blockers).toContain("CODEX_ALLOWED_FILE_WILDCARD_REJECTED");
+  });
+
+  it("rejects command shell control operators", async () => {
+    const service = new ExecutorPreflightService(tempRepo, runner());
+
+    const report = await service.run("run-1", {
+      ...request,
+      allowedCommands: ["corepack pnpm test && git push"],
+    });
+
+    expect(report.passed).toBe(false);
+    expect(report.blockers).toContain("CODEX_UNSAFE_COMMAND_OPERATOR_REJECTED");
+  });
 });

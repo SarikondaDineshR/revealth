@@ -216,6 +216,45 @@ describe("Sandboxed Codex execution adapter", () => {
     });
   });
 
+  it("rejects command shell control operators", async () => {
+    const { db } = createDb({
+      run: queuedRun({
+        allowedCommands: ["corepack pnpm test && git push"],
+      }),
+    });
+    const adapter = new SandboxedCodexExecutionAdapter(db as never, { CODEX_EXECUTION_MODE: "dry_run" });
+
+    await expect(adapter.executeDryRun(runId)).rejects.toMatchObject({
+      code: "CODEX_UNSAFE_COMMAND_OPERATOR_REJECTED",
+    });
+  });
+
+  it("rejects allowed file wildcards", async () => {
+    const { db } = createDb({
+      run: queuedRun({
+        allowedFiles: ["apps/api/src/**/*.ts"],
+      }),
+    });
+    const adapter = new SandboxedCodexExecutionAdapter(db as never, { CODEX_EXECUTION_MODE: "dry_run" });
+
+    await expect(adapter.executeDryRun(runId)).rejects.toMatchObject({
+      code: "CODEX_ALLOWED_FILE_WILDCARD_REJECTED",
+    });
+  });
+
+  it("rejects execution runs when the approved contract snapshot drifts", async () => {
+    const { db } = createDb({
+      run: queuedRun({
+        branchName: "codex/drifted",
+      }),
+    });
+    const adapter = new SandboxedCodexExecutionAdapter(db as never, { CODEX_EXECUTION_MODE: "dry_run" });
+
+    await expect(adapter.executeDryRun(runId)).rejects.toMatchObject({
+      code: "CODEX_CONTRACT_SNAPSHOT_MISMATCH",
+    });
+  });
+
   it("rejects absolute paths", async () => {
     const { db } = createDb({
       run: queuedRun({
@@ -307,6 +346,7 @@ describe("Sandboxed Codex execution adapter", () => {
     expect(report.blockers).toEqual([]);
     expect(report.nextAllowedAction).toBe("start_dry_run");
     expect(state.run.executionWorkspaceManifestPath).toBe(`.revealth/execution-runs/${runId}/manifest.json`);
+    expect(JSON.stringify(state.run.executionLogs)).toContain("Codex preflight passed");
     expect(state.auditLogs.map((log) => log.action)).toEqual(
       expect.arrayContaining([
         "codex.execution_run.preflight.started",

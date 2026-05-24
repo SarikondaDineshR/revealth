@@ -61,51 +61,83 @@ function Approve-Artifact {
   return Invoke-Revealth -Method POST -Path "/workspaces/$WorkspaceId/approvals/$($approval.id)/approve" -Body (@{ decisionNotes = $Notes } | ConvertTo-Json)
 }
 
-Write-Host "== Revealth v0.1 final smoke test =="
+Write-Host "== Revealth demo smoke test =="
 
 Invoke-Revealth -Method GET -Path "/health" | Out-Null
 
-$workspaceName = "Revealth Smoke Test $(Get-Date -Format 'yyyyMMdd-HHmmss')"
+$workspaceName = "Real Estate CRM Showcase $(Get-Date -Format 'yyyyMMdd-HHmmss')"
 $workspace = (Invoke-Revealth -Method POST -Path "/workspaces" -Body (@{ name = $workspaceName } | ConvertTo-Json)).data
 Write-Host "Workspace: $($workspace.id)"
 
 Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/workflows/intake" -Body (@{
-  rawProjectIdea = "Build Revealth v0.1 as an autonomous AI software company operating system focused on governed planning, SDLC orchestration, task generation, audit logging, approval workflows, GitHub dry-run issue creation, and safe Codex execution readiness without live code execution."
+  rawProjectIdea = "Build a real estate CRM platform for boutique brokerages. It should manage contacts, buyer and seller leads, property preferences, showing notes, follow-up reminders, deal stages, and simple reporting. The demo must use fake client data only, require owner approval before client-facing communication, and avoid live code execution or external outreach."
 } | ConvertTo-Json) | Out-Null
 
 $projectBrief = Wait-ForArtifactType -WorkspaceId $workspace.id -ArtifactType "project_brief"
-Approve-Artifact -WorkspaceId $workspace.id -Artifact $projectBrief -Notes "Smoke: approve project brief." | Out-Null
+Approve-Artifact -WorkspaceId $workspace.id -Artifact $projectBrief -Notes "Demo: project brief approved. The founder wants the team to continue planning the real estate CRM." | Out-Null
 
 $sdlcPlan = Wait-ForArtifactType -WorkspaceId $workspace.id -ArtifactType "sdlc_plan"
-Approve-Artifact -WorkspaceId $workspace.id -Artifact $sdlcPlan -Notes "Smoke: approve SDLC plan." | Out-Null
+Approve-Artifact -WorkspaceId $workspace.id -Artifact $sdlcPlan -Notes "Demo: SDLC plan approved. Continue into task breakdown with approval gates intact." | Out-Null
 
 $taskBatch = Wait-ForArtifactType -WorkspaceId $workspace.id -ArtifactType "task_batch"
-Approve-Artifact -WorkspaceId $workspace.id -Artifact $taskBatch -Notes "Smoke: approve task batch." | Out-Null
+Approve-Artifact -WorkspaceId $workspace.id -Artifact $taskBatch -Notes "Demo: task batch approved. Prepare a believable AI workforce recommendation." | Out-Null
 $workforcePlan = (Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/artifacts/$($taskBatch.id)/workforce-scaling-plans").data
 if ($workforcePlan.artifactType -ne "workforce_scaling_plan") { throw "Expected workforce_scaling_plan artifact." }
 if ($workforcePlan.status -ne "pending_approval") { throw "Expected workforce_scaling_plan pending approval." }
-Approve-Artifact -WorkspaceId $workspace.id -Artifact $workforcePlan -Notes "Smoke: approve workforce scaling plan." | Out-Null
+Approve-Artifact -WorkspaceId $workspace.id -Artifact $workforcePlan -Notes "Demo: approve AI team scaling. Activate the team for simulated coordination only." | Out-Null
 $activation = (Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/artifacts/$($workforcePlan.id)/workforce/activate").data
 if ($activation.status -ne "activated") { throw "Expected activated workforce, received $($activation.status)" }
 if ($activation.createdAssignments.Count -lt 1) { throw "Expected workforce activation to create assignments." }
 $dispatch = (Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/workforce/dispatch").data
 if ($dispatch.createdDispatchCount -lt 1) { throw "Expected workforce dispatch to create work records." }
 
+Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/agent-messages" -Body (@{
+  agentId = "ceo"
+  agentRole = "CEO Agent"
+  messageType = "decision"
+  visibility = "internal"
+  message = "Scope stays focused: prove the CRM workflow, approval loop, and client-safe communication before any automation is expanded."
+} | ConvertTo-Json) | Out-Null
+
+Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/agent-messages" -Body (@{
+  agentId = "product_manager"
+  agentRole = "Product Manager Agent"
+  messageType = "update"
+  visibility = "client_visible"
+  message = "The team has mapped the CRM around lead capture, showing notes, follow-up reminders, and broker owner approvals."
+} | ConvertTo-Json) | Out-Null
+
+Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/agent-messages" -Body (@{
+  agentId = "designer"
+  agentRole = "Designer Agent"
+  messageType = "handoff"
+  visibility = "internal"
+  message = "Handoff complete: workflow sketches are ready for frontend review once the owner approves the next artifact."
+} | ConvertTo-Json) | Out-Null
+
+Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/agent-messages" -Body (@{
+  agentId = "qa"
+  agentRole = "QA Agent"
+  messageType = "blocker"
+  visibility = "internal"
+  message = "Risk detected: client-visible updates must remain simulated until consent and outbound policy are explicitly approved."
+} | ConvertTo-Json) | Out-Null
+
 $client = (Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/clients" -Body (@{
-  name = "Ada Lovelace"
-  company = "Analytical Engines LLC"
-  email = "ada@example.com"
+  name = "Maya Chen"
+  company = "Harbor & Pine Realty"
+  email = "maya.chen@example.test"
   status = "lead"
-  source = "smoke_demo"
-  notes = "Demo client for governed client communication foundation."
+  source = "showcase_demo"
+  notes = "Broker-owner evaluating a CRM for agents who lose follow-ups after showings and open houses."
 } | ConvertTo-Json)).data
 
 $lead = (Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/leads" -Body (@{
   clientProfileId = $client.id
-  title = "Password manager MVP discovery"
-  needSummary = "Build a small password manager MVP with fake demo data until security architecture is reviewed."
-  budgetRange = "demo-only"
-  urgency = "medium"
+  title = "Real estate CRM platform"
+  needSummary = "Maya needs contact management, buyer/seller lead tracking, showing notes, reminders, and a simple pipeline dashboard for five agents."
+  budgetRange = "demo estimate: $25k-$45k"
+  urgency = "high"
   stage = "discovery"
   ownerAgentRole = "Sales Agent"
 } | ConvertTo-Json)).data
@@ -115,14 +147,14 @@ Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/client-conversa
   agentRole = "Sales Agent"
   channel = "simulated_chat"
   visibility = "client_visible"
-  message = "Preparing a safe discovery script for owner approval before any real client outreach."
+  message = "Client-safe update: the team is preparing a discovery script around lead follow-up gaps, showing notes, and broker reporting."
   approvalRequired = $true
 } | ConvertTo-Json) | Out-Null
 
 $meetingRequest = (Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/meeting-requests" -Body (@{
   clientProfileId = $client.id
   requestedByAgentRole = "Customer Success Agent"
-  purpose = "Simulated discovery meeting request for owner review"
+  purpose = "Simulated discovery review with Maya Chen about CRM workflow priorities"
   status = "pending_approval"
   consentRequired = $true
 } | ConvertTo-Json)).data
@@ -142,7 +174,7 @@ if ($policyEvaluation.allowed -ne $false) { throw "Expected external communicati
 if (-not ($policyEvaluation.blockers | Where-Object { $_ -eq "consent_granted_required" })) {
   throw "Expected policy evaluation to require granted consent for external channels."
 }
-Approve-Artifact -WorkspaceId $workspace.id -Artifact $clientScript -Notes "Smoke: approve client communication script for internal draft generation." | Out-Null
+Approve-Artifact -WorkspaceId $workspace.id -Artifact $clientScript -Notes "Demo: approve internal script draft for the CRM discovery conversation. No outreach is allowed." | Out-Null
 
 $communicationDraft = (Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/client-communication/drafts" -Body (@{
   clientProfileId = $client.id
@@ -156,7 +188,7 @@ if ($communicationDraft.channel -ne "email_draft") { throw "Expected email_draft
 if ($communicationDraft.body -notmatch "No email") { throw "Expected communication draft to state no external sending occurred." }
 
 $draftApproval = (Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/client-communication/drafts/$($communicationDraft.id)/approve" -Body (@{
-  decisionNotes = "Smoke: approve draft readiness only. Do not send externally."
+  decisionNotes = "Demo: approve draft readiness only. Keep the CRM client message internal."
 } | ConvertTo-Json)).data
 if ($draftApproval.draft.status -ne "approved") { throw "Expected approved communication draft." }
 if ($draftApproval.authorization.status -ne "authorized_draft_only") { throw "Expected authorized_draft_only outbound authorization." }
@@ -174,19 +206,19 @@ if (-not ($reviewPackage.blockers | Where-Object { $_ -eq "external_send_disable
 
 $githubBatch = Wait-ForArtifactType -WorkspaceId $workspace.id -ArtifactType "github_issue_batch"
 Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/github/connections" -Body (@{ repository = "draft/repository" } | ConvertTo-Json) | Out-Null
-Approve-Artifact -WorkspaceId $workspace.id -Artifact $githubBatch -Notes "Smoke: approve GitHub issue batch dry-run." | Out-Null
+Approve-Artifact -WorkspaceId $workspace.id -Artifact $githubBatch -Notes "Demo: approve GitHub issue dry-run records only." | Out-Null
 
 $issues = (Invoke-Revealth -Method GET -Path "/workspaces/$($workspace.id)/github/issues").data
 if (-not ($issues | Where-Object { $_.dryRun -eq $true })) { throw "Expected at least one dry-run GitHub issue record." }
 
 $codexPacket = (Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/codex/task-batches/$($taskBatch.id)/task-packet-batches" -Body (@{ repository = "draft/repository" } | ConvertTo-Json)).data
-Approve-Artifact -WorkspaceId $workspace.id -Artifact $codexPacket -Notes "Smoke: approve Codex packet batch." | Out-Null
+Approve-Artifact -WorkspaceId $workspace.id -Artifact $codexPacket -Notes "Demo: approve Codex packets for planning only." | Out-Null
 
 $gitPlan = (Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/codex/task-packet-batches/$($codexPacket.id)/git-execution-plans" -Body (@{ requiredReviewers = @("human-owner") } | ConvertTo-Json)).data
-Approve-Artifact -WorkspaceId $workspace.id -Artifact $gitPlan -Notes "Smoke: approve Git execution plan." | Out-Null
+Approve-Artifact -WorkspaceId $workspace.id -Artifact $gitPlan -Notes "Demo: approve Git execution plan artifact only. No branch creation." | Out-Null
 
-$contract = (Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/codex/git-execution-plans/$($gitPlan.id)/execution-contracts" -Body (@{ maxExecutionScope = "smoke-test dry-run only" } | ConvertTo-Json)).data
-Approve-Artifact -WorkspaceId $workspace.id -Artifact $contract -Notes "Smoke: approve execution contract." | Out-Null
+$contract = (Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/codex/git-execution-plans/$($gitPlan.id)/execution-contracts" -Body (@{ maxExecutionScope = "showcase dry-run only" } | ConvertTo-Json)).data
+Approve-Artifact -WorkspaceId $workspace.id -Artifact $contract -Notes "Demo: approve dry-run execution contract. Live execution remains blocked." | Out-Null
 
 $run = (Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/codex/execution-contracts/$($contract.id)/execution-runs").data
 $dryRun = (Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/codex/execution-runs/$($run.id)/start").data
@@ -252,3 +284,4 @@ if (-not ($controlPlane.outboundReviewPackages | Where-Object { $_.externalSendE
 Write-Host "Smoke test passed."
 Write-Host "Workspace: $($workspace.id)"
 Write-Host "Control plane: http://localhost:3000/workspaces/$($workspace.id)/control-plane"
+Write-Host "Company command center: http://localhost:3000/workspaces/$($workspace.id)/company"

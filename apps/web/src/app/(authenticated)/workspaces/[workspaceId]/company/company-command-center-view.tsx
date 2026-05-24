@@ -5,6 +5,7 @@ import { statusTone } from "../../../../../lib/control-plane";
 
 const AGENT_IDENTITIES = [
   { agentId: "ceo", name: "CEO Agent", role: "Sets direction", department: "Leadership", avatar: "C" },
+  { agentId: "cto", name: "CTO Agent", role: "Reviews technical safety", department: "Leadership", avatar: "T" },
   { agentId: "product_manager", name: "Product Manager Agent", role: "Shapes the product", department: "Product", avatar: "P" },
   { agentId: "engineering_manager", name: "Engineering Manager Agent", role: "Coordinates delivery", department: "Engineering", avatar: "E" },
   { agentId: "designer", name: "Designer Agent", role: "Designs the system experience", department: "Design", avatar: "D" },
@@ -60,6 +61,16 @@ function simpleTask(task: string, status: string): string {
   if (text.includes("client") || text.includes("communication")) return "Preparing client updates";
   if (text.includes("plan") || text.includes("brief")) return "Your AI team is reviewing it";
   return task || "Ready for next step";
+}
+
+function timelineLabel(messageType: string, index: number): string {
+  const time = index === 0 ? "2 minutes ago" : index === 1 ? "5 minutes ago" : `${(index + 1) * 4} minutes ago`;
+  if (messageType === "blocker") return `${time} - risk detected`;
+  if (messageType === "handoff") return `${time} - handoff complete`;
+  if (messageType === "review") return `${time} - review requested`;
+  if (messageType === "question") return `${time} - awaiting approval`;
+  if (messageType === "decision") return `${time} - decision recorded`;
+  return `${time} - update posted`;
 }
 
 function projectStageIndex(dashboard: ControlPlaneDashboard): number {
@@ -132,10 +143,10 @@ export function CompanyCommandCenterView({
 
       <section className="company-hero">
         <div>
-          <p className="eyebrow">Current company status</p>
+          <p className="eyebrow">Living company demo</p>
           <h2>{journeyText(dashboard)}</h2>
           <p className="muted">
-            Revealth is coordinating planning, approvals, client readiness, and safety checks with visible evidence before any action can happen.
+            Watch the AI company plan the product, divide work, surface risks, prepare client-safe updates, and stop at approval gates.
           </p>
         </div>
         <div className="hero-metrics">
@@ -153,6 +164,14 @@ export function CompanyCommandCenterView({
           </div>
         </div>
       </section>
+
+      <div className="story-strip">
+        <span>Project starts in planning</span>
+        <span>Team assigned</span>
+        <span>Work in progress</span>
+        <span>Paused for approval</span>
+        <span>Safe next step shown</span>
+      </div>
 
       <Section title="Project Journey">
         <div className="project-tracker" aria-label="Project journey tracker">
@@ -231,11 +250,12 @@ export function CompanyCommandCenterView({
       <div className="grid two">
         <Section title="Team Discussion">
           <div className="timeline">
-            {latestMessages.map((message) => (
+            {latestMessages.map((message, index) => (
               <div className="timeline-item" key={message.id}>
                 <Badge status={message.messageType} />
                 <div>
                   <strong>{message.agentRole}</strong>
+                  <p className="muted tight">{timelineLabel(message.messageType, index)}</p>
                   <p className="tight">{message.message}</p>
                 </div>
               </div>
@@ -246,11 +266,12 @@ export function CompanyCommandCenterView({
 
         <Section title="Client Updates">
           <div className="timeline">
-            {clientUpdates.map((update) => (
+            {clientUpdates.map((update, index) => (
               <div className="timeline-item" key={update.id}>
                 <Badge status={update.messageType} />
                 <div>
                   <strong>{update.agentRole}</strong>
+                  <p className="muted tight">{timelineLabel(update.messageType, index)}</p>
                   <p className="tight">{update.message}</p>
                 </div>
               </div>

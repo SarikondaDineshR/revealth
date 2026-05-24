@@ -310,6 +310,20 @@ textarea {
   font-size: 12px;
 }
 
+.story-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.story-strip span {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #ffffff;
+  font-weight: 700;
+}
+
 .project-tracker {
   display: grid;
   grid-template-columns: repeat(7, minmax(120px, 1fr));
@@ -486,7 +500,8 @@ textarea {
   }
 
   .company-hero,
-  .hero-metrics {
+  .hero-metrics,
+  .story-strip {
     grid-template-columns: 1fr;
   }
 }

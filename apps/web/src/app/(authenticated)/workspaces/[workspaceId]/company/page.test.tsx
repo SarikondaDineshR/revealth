@@ -101,9 +101,14 @@ describe("CompanyCommandCenterView", () => {
     expect(html).toContain("Idea Received");
     expect(html).toContain("Ready for Approval");
     expect(html).toContain("CEO Agent");
+    expect(html).toContain("CTO Agent");
     expect(html).toContain("Backend Developer Agent");
     expect(html).toContain("Waiting for owner approval");
     expect(html).toContain("Work has been divided between agents");
+    expect(html).toContain("Project starts in planning");
+    expect(html).toContain("Paused for approval");
+    expect(html).toContain("2 minutes ago");
+    expect(html).toContain("review requested");
     expect(html).toContain("No external communication, code execution, branches, pull requests, calls, or meetings");
   });
 });

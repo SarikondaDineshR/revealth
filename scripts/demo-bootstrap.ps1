@@ -7,8 +7,38 @@ if (-not (Test-Path ".env")) {
   Write-Host "Created .env from .env.example"
 }
 
+function Set-DotEnvValue {
+  param(
+    [Parameter(Mandatory = $true)][string]$Key,
+    [Parameter(Mandatory = $true)][string]$Value
+  )
+  $lines = Get-Content ".env"
+  $updated = $false
+  $lines = $lines | ForEach-Object {
+    if ($_ -match "^$([regex]::Escape($Key))=") {
+      $updated = $true
+      "$Key=$Value"
+    } else {
+      $_
+    }
+  }
+  if (-not $updated) {
+    $lines += "$Key=$Value"
+  }
+  Set-Content ".env" $lines
+}
+
+Set-DotEnvValue -Key "GITHUB_ISSUE_CREATION_MODE" -Value "dry_run"
+Set-DotEnvValue -Key "CODEX_EXECUTION_MODE" -Value "dry_run"
+
+& "$PSScriptRoot\demo-doctor.ps1"
+
 corepack pnpm install
-docker compose up -d
+docker compose up -d postgres temporal temporal-ui
+
+Write-Host "Building application services..."
+docker compose build api worker executor --progress=plain
+docker compose up -d api worker executor
 
 Write-Host "Waiting for containers..."
 Start-Sleep -Seconds 8

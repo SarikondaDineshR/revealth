@@ -32,11 +32,23 @@ From the Codespaces terminal at the repository root:
 
 ```bash
 corepack pnpm install
-docker compose up -d
+corepack pnpm demo:doctor
+docker compose up -d postgres temporal temporal-ui
 corepack pnpm db:generate
 corepack pnpm db:deploy
 corepack pnpm db:seed
+docker compose build api worker executor --progress=plain
+docker compose up -d api worker executor
 ```
+
+For the shortest demo path, run:
+
+```bash
+corepack pnpm demo:bootstrap
+corepack pnpm demo:smoke
+```
+
+`demo:doctor` fails fast when Docker, Compose, or buildx is not responding. If Docker hangs before build output reaches `loading Dockerfile`, treat it as a Codespaces Docker/buildx failure rather than a Revealth application failure.
 
 Check containers:
 
@@ -144,6 +156,7 @@ If the API is not ready immediately after `docker compose up -d`, wait for build
 docker compose ps
 docker compose logs api --tail=80
 docker compose logs worker --tail=80
+docker compose logs executor --tail=80
 ```
 
 If Prisma cannot connect, confirm Postgres is healthy and that host-run Prisma is using `127.0.0.1:5433`:

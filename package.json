@@ -21,6 +21,7 @@
     "db:seed": "corepack pnpm --filter @revealth/database db:seed",
     "docker:up": "docker compose up -d postgres temporal temporal-ui",
     "docker:down": "docker compose down",
+    "demo:doctor": "powershell -ExecutionPolicy Bypass -File scripts/demo-doctor.ps1",
     "demo:bootstrap": "powershell -ExecutionPolicy Bypass -File scripts/demo-bootstrap.ps1",
     "demo:smoke": "powershell -ExecutionPolicy Bypass -File scripts/smoke-test.ps1"
   },

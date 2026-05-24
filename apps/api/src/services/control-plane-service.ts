@@ -77,6 +77,7 @@ export class ControlPlaneService {
       githubIssues,
       agentAssignments,
       agentMessages,
+      workforceDispatches,
       executorHealth,
       executorRepoStatus,
     ] = await Promise.all([
@@ -88,6 +89,7 @@ export class ControlPlaneService {
       this.db.gitHubIssue.findMany({ where: { workspaceId }, orderBy: { createdAt: "desc" }, take: 50 }),
       this.db.agentAssignment.findMany({ where: { workspaceId }, orderBy: [{ status: "asc" }, { startedAt: "desc" }], take: 50 }),
       this.db.agentMessage.findMany({ where: { workspaceId }, orderBy: { createdAt: "desc" }, take: 100 }),
+      this.db.workforceDispatch.findMany({ where: { workspaceId }, orderBy: [{ status: "asc" }, { startedAt: "desc" }], take: 100 }),
       this.getExecutorHealth(),
       this.getExecutorRepoStatus(),
     ]);
@@ -142,6 +144,9 @@ export class ControlPlaneService {
       branchPreparationPlans,
       workforceScalingPlans,
       activatedWorkforceAssignments,
+      workforceDispatches,
+      workforceDispatchStatusCounts: countByStatus(workforceDispatches),
+      recentWorkforceHandoffs: agentMessages.filter((message) => message.messageType === "handoff").slice(0, 10),
       githubIssues,
       agentAssignments,
       agentMessages,

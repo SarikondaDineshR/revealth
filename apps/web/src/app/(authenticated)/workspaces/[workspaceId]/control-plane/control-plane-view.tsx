@@ -139,6 +139,52 @@ export function ControlPlaneDashboardView({
       </Section>
 
       <div className="grid two">
+        <Section title="Live AI Work Dispatch">
+          <CountStrip counts={dashboard.workforceDispatchStatusCounts} />
+          <div className="table-list">
+            {dashboard.workforceDispatches.slice(0, 10).map((dispatch) => (
+              <div className="row" key={dispatch.id}>
+                <span>{dispatch.assignedAgentRole}</span>
+                <Badge status={dispatch.status} />
+                <span className="muted">{dispatch.assignmentReason}</span>
+              </div>
+            ))}
+            {dashboard.workforceDispatches.length === 0 ? <p className="muted">No work has been dispatched yet.</p> : null}
+          </div>
+        </Section>
+
+        <Section title="Current Team Activity">
+          <div className="timeline">
+            {dashboard.agentMessages.slice(0, 8).map((message) => (
+              <div className="timeline-item" key={message.id}>
+                <Badge status={message.messageType} />
+                <div>
+                  <strong>{message.agentRole}</strong>
+                  <p className="tight">{message.message}</p>
+                </div>
+              </div>
+            ))}
+            {dashboard.agentMessages.length === 0 ? <p className="muted">No current activity yet.</p> : null}
+          </div>
+        </Section>
+      </div>
+
+      <Section title="Recent Team Handoffs">
+        <div className="timeline">
+          {dashboard.recentWorkforceHandoffs.slice(0, 8).map((message) => (
+            <div className="timeline-item" key={message.id}>
+              <Badge status="handoff" />
+              <div>
+                <strong>{message.agentRole}</strong>
+                <p className="tight">{message.message}</p>
+              </div>
+            </div>
+          ))}
+          {dashboard.recentWorkforceHandoffs.length === 0 ? <p className="muted">No team handoffs yet.</p> : null}
+        </div>
+      </Section>
+
+      <div className="grid two">
         <Section title="Recommended AI Team Scaling">
           {latestWorkforcePlan && workforceContent ? (
             <div className="grid compact">

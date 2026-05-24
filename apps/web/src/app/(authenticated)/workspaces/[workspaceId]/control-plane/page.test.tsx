@@ -200,6 +200,35 @@ const dashboard: ControlPlaneDashboard = {
       createdAt: "2026-05-23T00:00:00.000Z",
     },
   ],
+  workforceDispatches: [
+    {
+      id: "dispatch-1",
+      workspaceId: "workspace-1",
+      taskId: "task-1",
+      assignedAgentId: "backend_developer",
+      assignedAgentRole: "Backend Developer Agent",
+      assignmentReason: "Best matched to API task.",
+      estimatedComplexity: "medium",
+      status: "in_progress",
+      startedAt: "2026-05-23T00:00:00.000Z",
+      completedAt: null,
+    },
+  ],
+  workforceDispatchStatusCounts: { in_progress: 1 },
+  recentWorkforceHandoffs: [
+    {
+      id: "message-2",
+      workspaceId: "workspace-1",
+      agentId: "backend_developer",
+      agentRole: "Backend Developer Agent",
+      messageType: "handoff",
+      relatedArtifactId: "artifact-task-batch",
+      relatedWorkflowRunId: null,
+      visibility: "internal",
+      message: "Backend Developer Agent handed off next review to QA Agent.",
+      createdAt: "2026-05-23T00:00:00.000Z",
+    },
+  ],
 };
 
 describe("ControlPlaneDashboardView", () => {
@@ -215,6 +244,9 @@ describe("ControlPlaneDashboardView", () => {
     expect(html).toContain("AI Team");
     expect(html).toContain("Recommended AI Team Scaling");
     expect(html).toContain("Activated AI Team");
+    expect(html).toContain("Live AI Work Dispatch");
+    expect(html).toContain("Current Team Activity");
+    expect(html).toContain("Recent Team Handoffs");
     expect(html).toContain("QA Agent");
     expect(html).toContain("Who Is Working On What");
     expect(html).toContain("Agent Communication Feed");

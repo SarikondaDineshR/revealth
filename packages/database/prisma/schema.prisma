@@ -30,6 +30,7 @@ model Workspace {
   agentRuns   AgentRun[]
   agentAssignments AgentAssignment[]
   agentMessages AgentMessage[]
+  workforceDispatches WorkforceDispatch[]
   tasks       Task[]
   codexExecutionRuns CodexExecutionRun[]
   auditLogs   AuditLog[]
@@ -166,6 +167,27 @@ model AgentMessage {
   @@index([workspaceId, messageType])
   @@index([workspaceId, agentId])
   @@map("agent_messages")
+}
+
+model WorkforceDispatch {
+  id                  String      @id @default(uuid()) @db.Uuid
+  workspaceId         String      @map("workspace_id") @db.Uuid
+  taskId              String      @map("task_id") @db.Uuid
+  assignedAgentId     String      @map("assigned_agent_id")
+  assignedAgentRole   String      @map("assigned_agent_role")
+  assignmentReason    String      @map("assignment_reason")
+  estimatedComplexity String      @map("estimated_complexity")
+  status              String
+  workspace           Workspace   @relation(fields: [workspaceId], references: [id])
+  startedAt           DateTime    @default(now()) @map("started_at")
+  completedAt         DateTime?   @map("completed_at")
+  createdAt           DateTime    @default(now()) @map("created_at")
+  updatedAt           DateTime    @updatedAt @map("updated_at")
+
+  @@unique([workspaceId, taskId])
+  @@index([workspaceId, status])
+  @@index([workspaceId, assignedAgentId])
+  @@map("workforce_dispatches")
 }
 
 model Task {

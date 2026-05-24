@@ -88,6 +88,8 @@ Approve-Artifact -WorkspaceId $workspace.id -Artifact $workforcePlan -Notes "Smo
 $activation = (Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/artifacts/$($workforcePlan.id)/workforce/activate").data
 if ($activation.status -ne "activated") { throw "Expected activated workforce, received $($activation.status)" }
 if ($activation.createdAssignments.Count -lt 1) { throw "Expected workforce activation to create assignments." }
+$dispatch = (Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/workforce/dispatch").data
+if ($dispatch.createdDispatchCount -lt 1) { throw "Expected workforce dispatch to create work records." }
 
 $githubBatch = Wait-ForArtifactType -WorkspaceId $workspace.id -ArtifactType "github_issue_batch"
 Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/github/connections" -Body (@{ repository = "draft/repository" } | ConvertTo-Json) | Out-Null
@@ -122,6 +124,12 @@ if (-not $controlPlane.workforceScalingPlans -or $controlPlane.workforceScalingP
 }
 if (-not $controlPlane.activatedWorkforceAssignments -or $controlPlane.activatedWorkforceAssignments.Count -lt 1) {
   throw "Control plane activated workforce assignments missing."
+}
+if (-not $controlPlane.workforceDispatches -or $controlPlane.workforceDispatches.Count -lt 1) {
+  throw "Control plane workforce dispatches missing."
+}
+if (-not $controlPlane.recentWorkforceHandoffs -or $controlPlane.recentWorkforceHandoffs.Count -lt 1) {
+  throw "Control plane workforce handoffs missing."
 }
 
 Write-Host "Smoke test passed."

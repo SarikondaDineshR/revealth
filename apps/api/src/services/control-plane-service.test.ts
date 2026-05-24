@@ -120,6 +120,29 @@ describe("ControlPlaneService aggregation", () => {
             visibility: "client_visible",
             message: "Planning your project.",
           },
+          {
+            id: "message-2",
+            agentId: "backend_developer",
+            agentRole: "Backend Developer Agent",
+            messageType: "handoff",
+            visibility: "internal",
+            message: "Backend Developer Agent handed off next review to QA Agent.",
+          },
+        ],
+      },
+      workforceDispatch: {
+        findMany: async () => [
+          {
+            id: "dispatch-1",
+            taskId: "task-1",
+            assignedAgentId: "backend_developer",
+            assignedAgentRole: "Backend Developer Agent",
+            assignmentReason: "Best matched to API task.",
+            estimatedComplexity: "medium",
+            status: "in_progress",
+            startedAt: new Date(),
+            completedAt: null,
+          },
         ],
       },
     };
@@ -158,6 +181,9 @@ describe("ControlPlaneService aggregation", () => {
     expect(dashboard.activatedWorkforceAssignments).toHaveLength(1);
     expect(dashboard.agentAssignments).toHaveLength(2);
     expect(dashboard.clientVisibleAgentMessages).toHaveLength(1);
+    expect(dashboard.workforceDispatches).toHaveLength(1);
+    expect(dashboard.workforceDispatchStatusCounts).toEqual({ in_progress: 1 });
+    expect(dashboard.recentWorkforceHandoffs).toHaveLength(1);
     expect(dashboard.workflowStatusCounts).toEqual({ completed: 1 });
   });
 });

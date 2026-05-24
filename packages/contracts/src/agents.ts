@@ -72,6 +72,7 @@ export const aiCompanyAgentStatusSchema = z.enum([
 
 export const agentMessageTypeSchema = z.enum(["update", "blocker", "decision", "question", "handoff", "review"]);
 export const agentMessageVisibilitySchema = z.enum(["internal", "client_visible"]);
+export const workforceDispatchStatusSchema = z.enum(["assigned", "in_progress", "blocked", "review", "completed"]);
 
 export const agentRegistryItemSchema = z.object({
   agentId: nonEmptyString,
@@ -102,3 +103,4 @@ export type AiCompanyAgentStatus = z.infer<typeof aiCompanyAgentStatusSchema>;
 export type AgentMessageType = z.infer<typeof agentMessageTypeSchema>;
 export type AgentMessageVisibility = z.infer<typeof agentMessageVisibilitySchema>;
 export type AgentRegistryItem = z.infer<typeof agentRegistryItemSchema>;
+export type WorkforceDispatchStatus = z.infer<typeof workforceDispatchStatusSchema>;

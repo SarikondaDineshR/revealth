@@ -117,6 +117,19 @@ export interface AgentMessage {
   createdAt: string;
 }
 
+export interface WorkforceDispatch {
+  id: string;
+  workspaceId: string;
+  taskId: string;
+  assignedAgentId: string;
+  assignedAgentRole: string;
+  assignmentReason: string;
+  estimatedComplexity: string;
+  status: "assigned" | "in_progress" | "blocked" | "review" | "completed";
+  startedAt: string;
+  completedAt: string | null;
+}
+
 export interface BranchPreparationPlan extends Artifact {
   artifactType: "branch_preparation_plan";
 }
@@ -182,6 +195,9 @@ export interface ControlPlaneDashboard {
   activatedWorkforceAssignments: AgentAssignment[];
   agentMessages: AgentMessage[];
   clientVisibleAgentMessages: AgentMessage[];
+  workforceDispatches: WorkforceDispatch[];
+  workforceDispatchStatusCounts: Record<string, number>;
+  recentWorkforceHandoffs: AgentMessage[];
 }
 
 export const api = {

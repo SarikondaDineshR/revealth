@@ -104,6 +104,12 @@ if ($dryRun.status -ne "completed_dry_run") { throw "Expected completed_dry_run,
 
 $controlPlane = (Invoke-Revealth -Method GET -Path "/workspaces/$($workspace.id)/control-plane").data
 if (-not $controlPlane.lineage) { throw "Control plane lineage missing." }
+if (-not $controlPlane.agentAssignments -or $controlPlane.agentAssignments.Count -lt 3) {
+  throw "Control plane AI team assignments missing."
+}
+if (-not $controlPlane.clientVisibleAgentMessages -or $controlPlane.clientVisibleAgentMessages.Count -lt 1) {
+  throw "Control plane client-visible agent updates missing."
+}
 
 Write-Host "Smoke test passed."
 Write-Host "Workspace: $($workspace.id)"

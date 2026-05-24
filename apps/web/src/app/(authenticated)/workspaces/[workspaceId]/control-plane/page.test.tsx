@@ -124,6 +124,47 @@ const dashboard: ControlPlaneDashboard = {
   ],
   branchPreparationPlans: [],
   githubIssues: [{ id: "issue-1", title: "Draft issue", status: "dry_run", dryRun: true, repository: "draft/repo" }],
+  agentAssignments: [
+    {
+      id: "assignment-1",
+      workspaceId: "workspace-1",
+      agentId: "product_manager",
+      role: "Product Manager Agent",
+      currentTask: "Planning your project",
+      assignedArtifactId: null,
+      status: "working",
+      startedAt: "2026-05-23T00:00:00.000Z",
+      completedAt: null,
+    },
+  ],
+  agentMessages: [
+    {
+      id: "message-1",
+      workspaceId: "workspace-1",
+      agentId: "product_manager",
+      agentRole: "Product Manager Agent",
+      messageType: "update",
+      relatedArtifactId: null,
+      relatedWorkflowRunId: null,
+      visibility: "client_visible",
+      message: "Planning your project.",
+      createdAt: "2026-05-23T00:00:00.000Z",
+    },
+  ],
+  clientVisibleAgentMessages: [
+    {
+      id: "message-1",
+      workspaceId: "workspace-1",
+      agentId: "product_manager",
+      agentRole: "Product Manager Agent",
+      messageType: "update",
+      relatedArtifactId: null,
+      relatedWorkflowRunId: null,
+      visibility: "client_visible",
+      message: "Planning your project.",
+      createdAt: "2026-05-23T00:00:00.000Z",
+    },
+  ],
 };
 
 describe("ControlPlaneDashboardView", () => {
@@ -136,6 +177,11 @@ describe("ControlPlaneDashboardView", () => {
     expect(html).toContain("Demo Status");
     expect(html).toContain("Readiness Summary");
     expect(html).toContain("Lineage");
+    expect(html).toContain("AI Team");
+    expect(html).toContain("Who Is Working On What");
+    expect(html).toContain("Agent Communication Feed");
+    expect(html).toContain("Client-visible Updates");
+    expect(html).toContain("Product Manager Agent");
     expect(html).toContain("Approval Queue");
     expect(html).toContain("Executor Health");
     expect(html).toContain("Temporal Workflow Status");

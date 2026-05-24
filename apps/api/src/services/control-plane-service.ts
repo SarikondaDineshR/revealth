@@ -75,6 +75,8 @@ export class ControlPlaneService {
       executionRuns,
       auditEvents,
       githubIssues,
+      agentAssignments,
+      agentMessages,
       executorHealth,
       executorRepoStatus,
     ] = await Promise.all([
@@ -84,6 +86,8 @@ export class ControlPlaneService {
       this.db.codexExecutionRun.findMany({ where: { workspaceId }, orderBy: { createdAt: "desc" }, take: 50 }),
       this.db.auditLog.findMany({ where: { workspaceId }, orderBy: { createdAt: "desc" }, take: 100 }),
       this.db.gitHubIssue.findMany({ where: { workspaceId }, orderBy: { createdAt: "desc" }, take: 50 }),
+      this.db.agentAssignment.findMany({ where: { workspaceId }, orderBy: [{ status: "asc" }, { startedAt: "desc" }], take: 50 }),
+      this.db.agentMessage.findMany({ where: { workspaceId }, orderBy: { createdAt: "desc" }, take: 100 }),
       this.getExecutorHealth(),
       this.getExecutorRepoStatus(),
     ]);
@@ -132,6 +136,9 @@ export class ControlPlaneService {
       auditEvents,
       branchPreparationPlans,
       githubIssues,
+      agentAssignments,
+      agentMessages,
+      clientVisibleAgentMessages: agentMessages.filter((message) => message.visibility === "client_visible"),
     };
   }
 

@@ -28,6 +28,8 @@ model Workspace {
   approvals   Approval[]
   workflows   WorkflowRun[]
   agentRuns   AgentRun[]
+  agentAssignments AgentAssignment[]
+  agentMessages AgentMessage[]
   tasks       Task[]
   codexExecutionRuns CodexExecutionRun[]
   auditLogs   AuditLog[]
@@ -49,6 +51,7 @@ model WorkflowRun {
   agentRuns    AgentRun[]
   auditLogs    AuditLog[]
   artifacts     Artifact[]
+  agentMessages AgentMessage[]
   createdAt    DateTime    @default(now()) @map("created_at")
   completedAt  DateTime?   @map("completed_at")
 
@@ -76,6 +79,8 @@ model Artifact {
   sourceApproval    Approval?   @relation("ArtifactSourceApproval", fields: [sourceApprovalId], references: [id])
   approvals         Approval[]  @relation("ArtifactApprovals")
   tasks             Task[]
+  agentAssignments  AgentAssignment[]
+  agentMessages     AgentMessage[]
   createdAt         DateTime    @default(now()) @map("created_at")
 
   @@unique([workspaceId, artifactType, version])
@@ -120,6 +125,47 @@ model AgentRun {
   completedAt    DateTime?    @map("completed_at")
 
   @@map("agent_runs")
+}
+
+model AgentAssignment {
+  id                 String      @id @default(uuid()) @db.Uuid
+  workspaceId        String      @map("workspace_id") @db.Uuid
+  agentId            String      @map("agent_id")
+  role               String
+  currentTask        String      @map("current_task")
+  assignedArtifactId String?     @map("assigned_artifact_id") @db.Uuid
+  status             String
+  workspace          Workspace   @relation(fields: [workspaceId], references: [id])
+  assignedArtifact   Artifact?   @relation(fields: [assignedArtifactId], references: [id])
+  startedAt          DateTime    @default(now()) @map("started_at")
+  completedAt        DateTime?   @map("completed_at")
+  createdAt          DateTime    @default(now()) @map("created_at")
+  updatedAt          DateTime    @updatedAt @map("updated_at")
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, agentId])
+  @@map("agent_assignments")
+}
+
+model AgentMessage {
+  id                   String       @id @default(uuid()) @db.Uuid
+  workspaceId          String       @map("workspace_id") @db.Uuid
+  agentId              String       @map("agent_id")
+  agentRole            String       @map("agent_role")
+  messageType          String       @map("message_type")
+  relatedArtifactId    String?      @map("related_artifact_id") @db.Uuid
+  relatedWorkflowRunId String?      @map("related_workflow_run_id") @db.Uuid
+  visibility           String
+  message              String
+  workspace            Workspace    @relation(fields: [workspaceId], references: [id])
+  relatedArtifact      Artifact?    @relation(fields: [relatedArtifactId], references: [id])
+  relatedWorkflowRun   WorkflowRun? @relation(fields: [relatedWorkflowRunId], references: [id])
+  createdAt            DateTime     @default(now()) @map("created_at")
+
+  @@index([workspaceId, visibility])
+  @@index([workspaceId, messageType])
+  @@index([workspaceId, agentId])
+  @@map("agent_messages")
 }
 
 model Task {

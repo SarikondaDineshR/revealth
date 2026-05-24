@@ -61,3 +61,44 @@ export const agentResponseEnvelopeSchema = z.object({
 export type AgentRequestEnvelope = z.infer<typeof agentRequestEnvelopeSchema>;
 export type AgentResponseEnvelope = z.infer<typeof agentResponseEnvelopeSchema>;
 
+export const aiCompanyAgentStatusSchema = z.enum([
+  "idle",
+  "thinking",
+  "working",
+  "blocked",
+  "waiting_for_approval",
+  "completed",
+]);
+
+export const agentMessageTypeSchema = z.enum(["update", "blocker", "decision", "question", "handoff", "review"]);
+export const agentMessageVisibilitySchema = z.enum(["internal", "client_visible"]);
+
+export const agentRegistryItemSchema = z.object({
+  agentId: nonEmptyString,
+  role: nonEmptyString,
+  displayName: nonEmptyString,
+  simpleStatusLabel: nonEmptyString,
+});
+
+export const createAgentAssignmentSchema = z.object({
+  agentId: nonEmptyString,
+  role: nonEmptyString,
+  currentTask: nonEmptyString,
+  assignedArtifactId: uuidSchema.nullish(),
+  status: aiCompanyAgentStatusSchema.default("idle"),
+});
+
+export const createAgentMessageSchema = z.object({
+  agentId: nonEmptyString,
+  agentRole: nonEmptyString,
+  messageType: agentMessageTypeSchema,
+  relatedArtifactId: uuidSchema.nullish(),
+  relatedWorkflowRunId: uuidSchema.nullish(),
+  visibility: agentMessageVisibilitySchema.default("internal"),
+  message: nonEmptyString,
+});
+
+export type AiCompanyAgentStatus = z.infer<typeof aiCompanyAgentStatusSchema>;
+export type AgentMessageType = z.infer<typeof agentMessageTypeSchema>;
+export type AgentMessageVisibility = z.infer<typeof agentMessageVisibilitySchema>;
+export type AgentRegistryItem = z.infer<typeof agentRegistryItemSchema>;

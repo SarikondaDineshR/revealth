@@ -1,11 +1,11 @@
 export function statusTone(status: string): "good" | "warn" | "bad" | "neutral" {
-  if (["approved", "completed", "completed_dry_run", "ready_for_live_execution", "ok", "passed"].includes(status)) {
+  if (["approved", "completed", "completed_dry_run", "ready_for_live_execution", "ok", "passed", "decision", "handoff", "review"].includes(status)) {
     return "good";
   }
-  if (["pending", "pending_approval", "queued", "running", "not_run", "draft"].includes(status)) {
+  if (["pending", "pending_approval", "queued", "running", "not_run", "draft", "thinking", "working", "waiting_for_approval", "update", "question"].includes(status)) {
     return "warn";
   }
-  if (["failed", "rejected", "cancelled", "error", "dirty"].includes(status)) {
+  if (["failed", "rejected", "cancelled", "error", "dirty", "blocked", "blocker"].includes(status)) {
     return "bad";
   }
   return "neutral";

@@ -92,6 +92,31 @@ export interface ExecutionRun {
   updatedAt: string;
 }
 
+export interface AgentAssignment {
+  id: string;
+  workspaceId: string;
+  agentId: string;
+  role: string;
+  currentTask: string;
+  assignedArtifactId: string | null;
+  status: string;
+  startedAt: string;
+  completedAt: string | null;
+}
+
+export interface AgentMessage {
+  id: string;
+  workspaceId: string;
+  agentId: string;
+  agentRole: string;
+  messageType: "update" | "blocker" | "decision" | "question" | "handoff" | "review";
+  relatedArtifactId: string | null;
+  relatedWorkflowRunId: string | null;
+  visibility: "internal" | "client_visible";
+  message: string;
+  createdAt: string;
+}
+
 export interface BranchPreparationPlan extends Artifact {
   artifactType: "branch_preparation_plan";
 }
@@ -142,6 +167,9 @@ export interface ControlPlaneDashboard {
   auditEvents: AuditEvent[];
   branchPreparationPlans: BranchPreparationPlan[];
   githubIssues: Array<{ id: string; title: string; status: string; dryRun: boolean; repository: string }>;
+  agentAssignments: AgentAssignment[];
+  agentMessages: AgentMessage[];
+  clientVisibleAgentMessages: AgentMessage[];
 }
 
 export const api = {

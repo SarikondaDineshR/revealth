@@ -4,6 +4,7 @@ import Fastify from "fastify";
 import type { ApiEnv } from "./config/env.js";
 import { registerErrorHandler } from "./plugins/error-handler.js";
 import { requestContextPlugin } from "./plugins/request-context.js";
+import { registerAgentRoutes } from "./routes/agents.js";
 import { registerApprovalRoutes } from "./routes/approvals.js";
 import { registerArtifactRoutes } from "./routes/artifacts.js";
 import { registerAuditRoutes } from "./routes/audit.js";
@@ -37,6 +38,7 @@ export async function buildApp(config: ApiEnv) {
 
   await registerHealthRoutes(app);
   await registerWorkspaceRoutes(app);
+  await registerAgentRoutes(app);
   await registerArtifactRoutes(app);
   await registerApprovalRoutes(app);
   await registerWorkflowRoutes(app);

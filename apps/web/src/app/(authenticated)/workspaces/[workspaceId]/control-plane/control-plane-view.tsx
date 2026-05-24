@@ -50,6 +50,17 @@ function Lineage({ dashboard }: { dashboard: ControlPlaneDashboard }) {
   );
 }
 
+function simpleAgentTask(task: string, status: string): string {
+  const text = `${task} ${status}`.toLowerCase();
+  if (text.includes("approval") || status === "waiting_for_approval") return "Waiting for owner approval";
+  if (text.includes("safety") || text.includes("qa") || text.includes("review")) return "Reviewing safety";
+  if (text.includes("design")) return "Designing the system";
+  if (text.includes("task")) return "Breaking work into tasks";
+  if (text.includes("plan") || text.includes("brief")) return "Planning your project";
+  if (status === "completed") return "Ready for next step";
+  return task;
+}
+
 export function ControlPlaneDashboardView({
   dashboard,
   workspaceId,
@@ -124,6 +135,33 @@ export function ControlPlaneDashboardView({
       <Section title="Lineage">
         <Lineage dashboard={dashboard} />
       </Section>
+
+      <div className="grid two">
+        <Section title="AI Team">
+          <div className="status-grid">
+            {dashboard.agentAssignments.slice(0, 6).map((assignment) => (
+              <div className="metric" key={assignment.id}>
+                <span className="muted">{assignment.role}</span>
+                <Badge status={assignment.status} />
+                <strong>{simpleAgentTask(assignment.currentTask, assignment.status)}</strong>
+              </div>
+            ))}
+            {dashboard.agentAssignments.length === 0 ? <p className="muted">No AI team assignments yet.</p> : null}
+          </div>
+        </Section>
+
+        <Section title="Who Is Working On What">
+          <div className="table-list">
+            {dashboard.agentAssignments.slice(0, 8).map((assignment) => (
+              <div className="row" key={assignment.id}>
+                <span>{assignment.role}</span>
+                <Badge status={assignment.status} />
+                <span className="muted">{simpleAgentTask(assignment.currentTask, assignment.status)}</span>
+              </div>
+            ))}
+          </div>
+        </Section>
+      </div>
 
       <div className="grid two">
         <Section title="Executor Health">
@@ -297,6 +335,43 @@ export function ControlPlaneDashboardView({
                 </div>
               </div>
             ))}
+          </div>
+        </Section>
+      </div>
+
+      <div className="grid two">
+        <Section title="Agent Communication Feed">
+          <div className="timeline">
+            {dashboard.agentMessages.slice(0, 10).map((message) => (
+              <div className="timeline-item" key={message.id}>
+                <Badge status={message.messageType} />
+                <div>
+                  <strong>{message.agentRole}</strong>
+                  <p className="tight">{message.message}</p>
+                  <p className="muted tight">
+                    {message.visibility} - {new Date(message.createdAt).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            ))}
+            {dashboard.agentMessages.length === 0 ? <p className="muted">No team updates yet.</p> : null}
+          </div>
+        </Section>
+
+        <Section title="Client-visible Updates">
+          <div className="timeline">
+            {dashboard.clientVisibleAgentMessages.slice(0, 8).map((message) => (
+              <div className="timeline-item" key={message.id}>
+                <Badge status={message.messageType} />
+                <div>
+                  <strong>{message.agentRole}</strong>
+                  <p className="tight">{message.message}</p>
+                </div>
+              </div>
+            ))}
+            {dashboard.clientVisibleAgentMessages.length === 0 ? (
+              <p className="muted">No client-visible updates yet.</p>
+            ) : null}
           </div>
         </Section>
       </div>

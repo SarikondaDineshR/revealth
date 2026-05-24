@@ -1,11 +1,13 @@
 import type { FastifyInstance } from "fastify";
 import { workspaceCreateRequestSchema } from "@revealth/contracts";
 import { prisma, WorkspaceRepository } from "@revealth/database";
+import { AgentCommunicationService } from "../services/agent-communication-service.js";
 import { AuditService } from "../services/audit-service.js";
 
 export async function registerWorkspaceRoutes(app: FastifyInstance): Promise<void> {
   const workspaces = new WorkspaceRepository(prisma);
   const audit = new AuditService(prisma);
+  const agentCommunication = new AgentCommunicationService(prisma);
 
   app.post("/workspaces", async (request) => {
     const body = workspaceCreateRequestSchema.parse(request.body);
@@ -18,6 +20,7 @@ export async function registerWorkspaceRoutes(app: FastifyInstance): Promise<voi
       status: "success",
       eventJson: { name: workspace.name },
     });
+    await agentCommunication.initializeWorkspaceTeam({ workspaceId: workspace.id, actorId: request.actor.id });
     return { data: workspace, error: null, requestId: request.requestId };
   });
 
@@ -33,4 +36,3 @@ export async function registerWorkspaceRoutes(app: FastifyInstance): Promise<voi
     return { data: workspace, error: null, requestId: request.requestId };
   });
 }
-

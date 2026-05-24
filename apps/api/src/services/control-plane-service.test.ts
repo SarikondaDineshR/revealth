@@ -89,6 +89,29 @@ describe("ControlPlaneService aggregation", () => {
         ],
       },
       gitHubIssue: { findMany: async () => [{ id: "issue-1", status: "dry_run", dryRun: true }] },
+      agentAssignment: {
+        findMany: async () => [
+          {
+            id: "assignment-1",
+            agentId: "product_manager",
+            role: "Product Manager Agent",
+            currentTask: "Planning your project",
+            status: "working",
+          },
+        ],
+      },
+      agentMessage: {
+        findMany: async () => [
+          {
+            id: "message-1",
+            agentId: "product_manager",
+            agentRole: "Product Manager Agent",
+            messageType: "update",
+            visibility: "client_visible",
+            message: "Planning your project.",
+          },
+        ],
+      },
     };
     const service = new ControlPlaneService(
       db as never,
@@ -121,6 +144,8 @@ describe("ControlPlaneService aggregation", () => {
     expect(dashboard.readiness.readyForLiveExecution).toBe(true);
     expect(dashboard.readiness.latestPreflightStatus).toBe("passed");
     expect(dashboard.branchPreparationPlans).toHaveLength(1);
+    expect(dashboard.agentAssignments).toHaveLength(1);
+    expect(dashboard.clientVisibleAgentMessages).toHaveLength(1);
     expect(dashboard.workflowStatusCounts).toEqual({ completed: 1 });
   });
 });

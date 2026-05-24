@@ -64,6 +64,10 @@ export const createCommunicationDraftSchema = z.object({
   createdByAgentRole: nonEmpty.default("Sales Agent"),
 });
 
+export const decideCommunicationDraftSchema = z.object({
+  decisionNotes: z.string().trim().min(1).default("Owner reviewed communication draft."),
+});
+
 type PolicyEvaluation = {
   allowed: boolean;
   blockers: string[];
@@ -403,6 +407,15 @@ export class ClientCommunicationService {
     });
   }
 
+  listOutboundAuthorizations(workspaceId: string) {
+    return this.db.outboundAuthorization.findMany({
+      where: { workspaceId },
+      include: { communicationDraft: true },
+      orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+      take: 100,
+    });
+  }
+
   async createCommunicationDraft(input: {
     workspaceId: string;
     actorId: string;
@@ -533,6 +546,104 @@ export class ClientCommunicationService {
     });
 
     return draft;
+  }
+
+  async decideCommunicationDraft(input: {
+    workspaceId: string;
+    draftId: string;
+    actorId: string;
+    decision: "approved" | "rejected" | "revision_requested";
+    body: z.input<typeof decideCommunicationDraftSchema>;
+  }) {
+    await this.assertWorkspace(input.workspaceId);
+    const body = decideCommunicationDraftSchema.parse(input.body);
+    const draft = await this.db.communicationDraft.findFirst({
+      where: { id: input.draftId, workspaceId: input.workspaceId },
+    });
+    if (!draft) {
+      throw Object.assign(new Error("Communication draft not found."), {
+        statusCode: 404,
+        code: "COMMUNICATION_DRAFT_NOT_FOUND",
+      });
+    }
+    if (draft.status === "approved" || draft.status === "rejected") {
+      throw Object.assign(new Error("Communication draft is already in a terminal state."), {
+        statusCode: 409,
+        code: "COMMUNICATION_DRAFT_TERMINAL",
+      });
+    }
+
+    const ownerApprovalId = crypto.randomUUID();
+    const nextDraftStatus =
+      input.decision === "approved" ? "approved" : input.decision === "rejected" ? "rejected" : "draft";
+    const authorizationStatus = input.decision === "approved" ? "authorized_draft_only" : "blocked";
+    const policyEvaluation = draft.policyEvaluationJson;
+    const consentState = this.extractConsentState(policyEvaluation);
+
+    const updatedDraft = await this.db.communicationDraft.update({
+      where: { id: draft.id },
+      data: {
+        status: nextDraftStatus,
+        approvedAt: input.decision === "approved" ? new Date() : null,
+      },
+    });
+
+    const authorization = await this.db.outboundAuthorization.create({
+      data: {
+        workspaceId: input.workspaceId,
+        communicationDraftId: draft.id,
+        channel: draft.channel,
+        status: authorizationStatus,
+        consentState,
+        ownerApprovalId,
+        policyEvaluationJson: policyEvaluation as Prisma.InputJsonValue,
+        externalSendEnabled: false,
+      },
+    });
+
+    const decisionAction =
+      input.decision === "approved"
+        ? "communication_draft.approved"
+        : input.decision === "rejected"
+          ? "communication_draft.rejected"
+          : "communication_draft.revision_requested";
+    await this.audit.append({
+      workspaceId: input.workspaceId,
+      actorType: "human",
+      actorId: input.actorId,
+      action: decisionAction,
+      sourceArtifactIds: draft.scriptArtifactId ? [draft.scriptArtifactId] : [],
+      targetArtifactIds: draft.scriptArtifactId ? [draft.scriptArtifactId] : [],
+      status: input.decision === "approved" ? "success" : "blocked",
+      eventJson: {
+        communicationDraftId: draft.id,
+        decision: input.decision,
+        decisionNotes: body.decisionNotes,
+        ownerApprovalId,
+        draftStatus: updatedDraft.status,
+        externalSendEnabled: false,
+      },
+    });
+    await this.audit.append({
+      workspaceId: input.workspaceId,
+      actorType: "system",
+      actorId: "ClientCommunicationService",
+      action: input.decision === "approved" ? "outbound_authorization.created" : "outbound_authorization.blocked",
+      sourceArtifactIds: draft.scriptArtifactId ? [draft.scriptArtifactId] : [],
+      targetArtifactIds: draft.scriptArtifactId ? [draft.scriptArtifactId] : [],
+      status: input.decision === "approved" ? "success" : "blocked",
+      eventJson: {
+        outboundAuthorizationId: authorization.id,
+        communicationDraftId: draft.id,
+        channel: authorization.channel,
+        authorizationStatus: authorization.status,
+        consentState: authorization.consentState,
+        ownerApprovalId,
+        externalSendEnabled: false,
+      },
+    });
+
+    return { draft: updatedDraft, authorization };
   }
 
 
@@ -703,5 +814,16 @@ export class ClientCommunicationService {
       });
     }
     return lead;
+  }
+
+  private extractConsentState(policyEvaluation: unknown): z.infer<typeof consentStateSchema> {
+    if (!policyEvaluation || typeof policyEvaluation !== "object" || Array.isArray(policyEvaluation)) return "unknown";
+    const policy = (policyEvaluation as Record<string, unknown>).policy;
+    if (policy && typeof policy === "object" && !Array.isArray(policy)) {
+      const value = (policy as Record<string, unknown>).consentState;
+      const parsed = consentStateSchema.safeParse(value);
+      if (parsed.success) return parsed.data;
+    }
+    return "unknown";
   }
 }

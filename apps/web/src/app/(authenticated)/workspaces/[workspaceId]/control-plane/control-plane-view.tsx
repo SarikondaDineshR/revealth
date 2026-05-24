@@ -315,6 +315,24 @@ export function ControlPlaneDashboardView({
         </div>
       </Section>
 
+      <Section title="Outbound Authorization Readiness">
+        <CountStrip counts={dashboard.outboundAuthorizationStatusCounts} />
+        <div className="table-list">
+          {dashboard.outboundAuthorizations.slice(0, 8).map((authorization) => (
+            <div className="row" key={authorization.id}>
+              <span>{authorization.channel}</span>
+              <Badge status={authorization.status} />
+              <span className="muted">
+                {authorization.externalSendEnabled ? "External sending enabled" : "External sending disabled"}
+              </span>
+            </div>
+          ))}
+          {dashboard.outboundAuthorizations.length === 0 ? (
+            <p className="muted">No outbound authorization records yet.</p>
+          ) : null}
+        </div>
+      </Section>
+
       <div className="grid two">
         <Section title="Recommended AI Team Scaling">
           {latestWorkforcePlan && workforceContent ? (

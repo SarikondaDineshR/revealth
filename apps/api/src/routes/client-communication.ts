@@ -6,8 +6,9 @@ import {
   createClientConversationSchema,
   createClientLeadSchema,
   createClientProfileSchema,
-  evaluateExternalCommunicationPolicySchema,
   createMeetingRequestSchema,
+  decideCommunicationDraftSchema,
+  evaluateExternalCommunicationPolicySchema,
 } from "../services/client-communication-service.js";
 
 export async function registerClientCommunicationRoutes(app: FastifyInstance): Promise<void> {
@@ -101,6 +102,51 @@ export async function registerClientCommunicationRoutes(app: FastifyInstance): P
       actorId: request.actor.id,
       body,
     });
+    return { data, error: null, requestId: request.requestId };
+  });
+
+  app.post("/workspaces/:workspaceId/client-communication/drafts/:draftId/approve", async (request) => {
+    const { workspaceId, draftId } = request.params as { workspaceId: string; draftId: string };
+    const body = decideCommunicationDraftSchema.parse(request.body ?? {});
+    const data = await service.decideCommunicationDraft({
+      workspaceId,
+      draftId,
+      actorId: request.actor.id,
+      decision: "approved",
+      body,
+    });
+    return { data, error: null, requestId: request.requestId };
+  });
+
+  app.post("/workspaces/:workspaceId/client-communication/drafts/:draftId/reject", async (request) => {
+    const { workspaceId, draftId } = request.params as { workspaceId: string; draftId: string };
+    const body = decideCommunicationDraftSchema.parse(request.body ?? {});
+    const data = await service.decideCommunicationDraft({
+      workspaceId,
+      draftId,
+      actorId: request.actor.id,
+      decision: "rejected",
+      body,
+    });
+    return { data, error: null, requestId: request.requestId };
+  });
+
+  app.post("/workspaces/:workspaceId/client-communication/drafts/:draftId/request-revision", async (request) => {
+    const { workspaceId, draftId } = request.params as { workspaceId: string; draftId: string };
+    const body = decideCommunicationDraftSchema.parse(request.body ?? {});
+    const data = await service.decideCommunicationDraft({
+      workspaceId,
+      draftId,
+      actorId: request.actor.id,
+      decision: "revision_requested",
+      body,
+    });
+    return { data, error: null, requestId: request.requestId };
+  });
+
+  app.get("/workspaces/:workspaceId/client-communication/outbound-authorizations", async (request) => {
+    const { workspaceId } = request.params as { workspaceId: string };
+    const data = await service.listOutboundAuthorizations(workspaceId);
     return { data, error: null, requestId: request.requestId };
   });
 }

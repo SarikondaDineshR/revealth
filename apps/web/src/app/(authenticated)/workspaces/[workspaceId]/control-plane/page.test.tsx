@@ -418,6 +418,21 @@ const dashboard: ControlPlaneDashboard = {
     },
   ],
   communicationDraftStatusCounts: { pending_approval: 1 },
+  outboundAuthorizations: [
+    {
+      id: "authorization-1",
+      workspaceId: "workspace-1",
+      communicationDraftId: "draft-1",
+      channel: "email_draft",
+      status: "authorized_draft_only",
+      consentState: "unknown",
+      ownerApprovalId: "55555555-5555-4555-8555-555555555555",
+      policyEvaluationJson: {},
+      externalSendEnabled: false,
+      createdAt: "2026-05-23T00:00:00.000Z",
+    },
+  ],
+  outboundAuthorizationStatusCounts: { authorized_draft_only: 1 },
 };
 
 describe("ControlPlaneDashboardView", () => {
@@ -443,6 +458,9 @@ describe("ControlPlaneDashboardView", () => {
     expect(html).toContain("Sales/Support Script Drafts");
     expect(html).toContain("External Communication Readiness");
     expect(html).toContain("Communication Drafts Awaiting Approval");
+    expect(html).toContain("Outbound Authorization Readiness");
+    expect(html).toContain("authorized_draft_only");
+    expect(html).toContain("External sending disabled");
     expect(html).toContain("Blocked by default");
     expect(html).toContain("email_draft");
     expect(html).toContain("Discovery follow-up");

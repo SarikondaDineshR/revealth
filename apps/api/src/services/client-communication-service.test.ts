@@ -11,6 +11,7 @@ function createDb() {
     conversations: [] as Record<string, unknown>[],
     meetingRequests: [] as Record<string, unknown>[],
     drafts: [] as Record<string, unknown>[],
+    authorizations: [] as Record<string, unknown>[],
     policies: [] as Record<string, unknown>[],
     artifacts: [] as Record<string, unknown>[],
     approvals: [] as Record<string, unknown>[],
@@ -69,10 +70,26 @@ function createDb() {
       communicationDraft: {
         findMany: async ({ where }: { where: { workspaceId: string } }) =>
           state.drafts.filter((draft) => draft.workspaceId === where.workspaceId),
+        findFirst: async ({ where }: { where: { id: string; workspaceId: string } }) =>
+          state.drafts.find((draft) => draft.id === where.id && draft.workspaceId === where.workspaceId) ?? null,
         create: async ({ data }: { data: Record<string, unknown> }) => {
           const draft = { id: `draft-${state.drafts.length + 1}`, createdAt: new Date(), ...data };
           state.drafts.push(draft);
           return draft;
+        },
+        update: async ({ where, data }: { where: { id: string }; data: Record<string, unknown> }) => {
+          const draft = state.drafts.find((candidate) => candidate.id === where.id);
+          Object.assign(draft ?? {}, data);
+          return draft;
+        },
+      },
+      outboundAuthorization: {
+        findMany: async ({ where }: { where: { workspaceId: string } }) =>
+          state.authorizations.filter((authorization) => authorization.workspaceId === where.workspaceId),
+        create: async ({ data }: { data: Record<string, unknown> }) => {
+          const authorization = { id: `authorization-${state.authorizations.length + 1}`, createdAt: new Date(), ...data };
+          state.authorizations.push(authorization);
+          return authorization;
         },
       },
       externalCommunicationPolicy: {
@@ -338,6 +355,59 @@ describe("ClientCommunicationService", () => {
         "communication_draft.generated",
         "communication_draft.approval_required",
       ]),
+    );
+  });
+
+  it("approves drafts into draft-only outbound authorization records", async () => {
+    const { db, state } = createDb();
+    const service = new ClientCommunicationService(db as never);
+    const client = await service.createClient({
+      workspaceId,
+      actorId,
+      body: { name: "Mary Jackson", company: "Approval Gates Inc", status: "lead", source: "demo", notes: "Demo client." },
+    });
+    const lead = await service.createLead({
+      workspaceId,
+      actorId,
+      body: {
+        clientProfileId: client.id,
+        title: "Draft authorization",
+        needSummary: "Needs owner approval for draft readiness.",
+        urgency: "medium",
+        stage: "discovery",
+        ownerAgentRole: "Sales Agent",
+      },
+    });
+    const script = await service.generateClientCommunicationScript({ workspaceId, leadId: lead.id, actorId });
+    Object.assign(state.artifacts[0]!, { status: "approved" });
+    Object.assign(state.approvals[0]!, { status: "approved", decidedAt: new Date() });
+    const draft = await service.createCommunicationDraft({
+      workspaceId,
+      actorId,
+      body: {
+        clientProfileId: client.id,
+        leadId: lead.id,
+        scriptArtifactId: script.id,
+        channel: "email_draft",
+      },
+    });
+
+    const decision = await service.decideCommunicationDraft({
+      workspaceId,
+      draftId: draft.id,
+      actorId,
+      decision: "approved",
+      body: { decisionNotes: "Approve draft readiness only." },
+    });
+
+    expect(decision.draft).toMatchObject({ status: "approved" });
+    expect(decision.authorization).toMatchObject({
+      status: "authorized_draft_only",
+      externalSendEnabled: false,
+      channel: "email_draft",
+    });
+    expect(state.audits.map((audit) => audit.action)).toEqual(
+      expect.arrayContaining(["communication_draft.approved", "outbound_authorization.created"]),
     );
   });
 });

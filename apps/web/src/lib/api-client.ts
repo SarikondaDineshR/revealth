@@ -244,6 +244,20 @@ export interface CommunicationDraft {
   createdAt: string;
 }
 
+export interface OutboundAuthorization {
+  id: string;
+  workspaceId: string;
+  communicationDraftId: string;
+  communicationDraft?: CommunicationDraft;
+  channel: "email_draft" | "meeting_draft" | "voice_draft";
+  status: "blocked" | "authorized_draft_only" | "revoked";
+  consentState: "unknown" | "required" | "granted" | "revoked";
+  ownerApprovalId: string;
+  policyEvaluationJson: unknown;
+  externalSendEnabled: boolean;
+  createdAt: string;
+}
+
 export interface RepoStatus {
   currentBranch: string;
   isClean: boolean;
@@ -310,6 +324,8 @@ export interface ControlPlaneDashboard {
   latestExternalCommunicationPolicyEvaluation: AuditEvent | null;
   communicationDrafts: CommunicationDraft[];
   communicationDraftStatusCounts: Record<string, number>;
+  outboundAuthorizations: OutboundAuthorization[];
+  outboundAuthorizationStatusCounts: Record<string, number>;
 }
 
 export const api = {

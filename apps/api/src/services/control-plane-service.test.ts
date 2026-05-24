@@ -230,6 +230,28 @@ describe("ControlPlaneService aggregation", () => {
           },
         ],
       },
+      outboundAuthorization: {
+        findMany: async () => [
+          {
+            id: "authorization-1",
+            workspaceId: workspace.id,
+            communicationDraftId: "draft-1",
+            communicationDraft: {
+              id: "draft-1",
+              channel: "email_draft",
+              status: "approved",
+              subject: "Discovery follow-up",
+            },
+            channel: "email_draft",
+            status: "authorized_draft_only",
+            consentState: "unknown",
+            ownerApprovalId: "55555555-5555-4555-8555-555555555555",
+            policyEvaluationJson: {},
+            externalSendEnabled: false,
+            createdAt: new Date("2026-05-23T00:00:00.000Z"),
+          },
+        ],
+      },
     };
     const service = new ControlPlaneService(
       db as never,
@@ -280,6 +302,8 @@ describe("ControlPlaneService aggregation", () => {
     expect(dashboard.latestExternalCommunicationPolicyEvaluation?.status).toBe("blocked");
     expect(dashboard.communicationDrafts).toHaveLength(1);
     expect(dashboard.communicationDraftStatusCounts).toEqual({ pending_approval: 1 });
+    expect(dashboard.outboundAuthorizations).toHaveLength(1);
+    expect(dashboard.outboundAuthorizationStatusCounts).toEqual({ authorized_draft_only: 1 });
     expect(dashboard.workflowStatusCounts).toEqual({ completed: 1 });
   });
 });

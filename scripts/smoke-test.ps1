@@ -155,6 +155,13 @@ if ($communicationDraft.status -ne "pending_approval") { throw "Expected communi
 if ($communicationDraft.channel -ne "email_draft") { throw "Expected email_draft communication draft." }
 if ($communicationDraft.body -notmatch "No email") { throw "Expected communication draft to state no external sending occurred." }
 
+$draftApproval = (Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/client-communication/drafts/$($communicationDraft.id)/approve" -Body (@{
+  decisionNotes = "Smoke: approve draft readiness only. Do not send externally."
+} | ConvertTo-Json)).data
+if ($draftApproval.draft.status -ne "approved") { throw "Expected approved communication draft." }
+if ($draftApproval.authorization.status -ne "authorized_draft_only") { throw "Expected authorized_draft_only outbound authorization." }
+if ($draftApproval.authorization.externalSendEnabled -ne $false) { throw "Expected outbound authorization externalSendEnabled false." }
+
 $githubBatch = Wait-ForArtifactType -WorkspaceId $workspace.id -ArtifactType "github_issue_batch"
 Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/github/connections" -Body (@{ repository = "draft/repository" } | ConvertTo-Json) | Out-Null
 Approve-Artifact -WorkspaceId $workspace.id -Artifact $githubBatch -Notes "Smoke: approve GitHub issue batch dry-run." | Out-Null
@@ -218,6 +225,12 @@ if (-not $controlPlane.latestExternalCommunicationPolicyEvaluation) {
 }
 if (-not $controlPlane.communicationDrafts -or $controlPlane.communicationDrafts.Count -lt 1) {
   throw "Control plane communication drafts missing."
+}
+if (-not $controlPlane.outboundAuthorizations -or $controlPlane.outboundAuthorizations.Count -lt 1) {
+  throw "Control plane outbound authorizations missing."
+}
+if (-not ($controlPlane.outboundAuthorizations | Where-Object { $_.externalSendEnabled -eq $false })) {
+  throw "Expected outbound authorization to keep externalSendEnabled false."
 }
 
 Write-Host "Smoke test passed."

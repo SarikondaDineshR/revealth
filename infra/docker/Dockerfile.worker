@@ -17,4 +17,4 @@ RUN pnpm install --frozen-lockfile=false
 RUN pnpm exec prisma generate --schema packages/database/prisma/schema.prisma
 RUN pnpm --filter @revealth/workers... build
 
-CMD ["pnpm", "--filter", "@revealth/workers", "start"]
+CMD ["node", "apps/workers/dist/worker.js"]

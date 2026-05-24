@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "@revealth/database";
 import {
   ClientCommunicationService,
+  createCommunicationDraftSchema,
   createClientConversationSchema,
   createClientLeadSchema,
   createClientProfileSchema,
@@ -79,6 +80,23 @@ export async function registerClientCommunicationRoutes(app: FastifyInstance): P
     const { workspaceId } = request.params as { workspaceId: string };
     const body = evaluateExternalCommunicationPolicySchema.parse(request.body ?? {});
     const data = await service.evaluateExternalCommunicationPolicy({
+      workspaceId,
+      actorId: request.actor.id,
+      body,
+    });
+    return { data, error: null, requestId: request.requestId };
+  });
+
+  app.get("/workspaces/:workspaceId/client-communication/drafts", async (request) => {
+    const { workspaceId } = request.params as { workspaceId: string };
+    const data = await service.listCommunicationDrafts(workspaceId);
+    return { data, error: null, requestId: request.requestId };
+  });
+
+  app.post("/workspaces/:workspaceId/client-communication/drafts", async (request) => {
+    const { workspaceId } = request.params as { workspaceId: string };
+    const body = createCommunicationDraftSchema.parse(request.body ?? {});
+    const data = await service.createCommunicationDraft({
       workspaceId,
       actorId: request.actor.id,
       body,

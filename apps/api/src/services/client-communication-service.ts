@@ -55,6 +55,15 @@ export const evaluateExternalCommunicationPolicySchema = z.object({
   scriptArtifactId: z.string().uuid().optional(),
 });
 
+export const createCommunicationDraftSchema = z.object({
+  clientProfileId: z.string().uuid(),
+  leadId: z.string().uuid().optional(),
+  scriptArtifactId: z.string().uuid().optional(),
+  channel: z.enum(["email_draft", "meeting_draft", "voice_draft"]),
+  subject: z.string().trim().min(1).optional(),
+  createdByAgentRole: nonEmpty.default("Sales Agent"),
+});
+
 type PolicyEvaluation = {
   allowed: boolean;
   blockers: string[];
@@ -385,6 +394,148 @@ export class ClientCommunicationService {
     });
   }
 
+  listCommunicationDrafts(workspaceId: string) {
+    return this.db.communicationDraft.findMany({
+      where: { workspaceId },
+      include: { clientProfile: true },
+      orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+      take: 100,
+    });
+  }
+
+  async createCommunicationDraft(input: {
+    workspaceId: string;
+    actorId: string;
+    body: z.input<typeof createCommunicationDraftSchema>;
+  }) {
+    await this.assertWorkspace(input.workspaceId);
+    const body = createCommunicationDraftSchema.parse(input.body);
+    const client = await this.assertClient(input.workspaceId, body.clientProfileId);
+    const lead = body.leadId ? await this.assertLead(input.workspaceId, body.leadId) : null;
+
+    const scriptArtifact = body.scriptArtifactId
+      ? await this.db.artifact.findFirst({
+          where: {
+            id: body.scriptArtifactId,
+            workspaceId: input.workspaceId,
+            artifactType: "client_communication_script",
+            status: "approved",
+          },
+        })
+      : null;
+    if (!scriptArtifact) {
+      throw Object.assign(new Error("Approved client communication script is required for communication drafts."), {
+        statusCode: 409,
+        code: "APPROVED_CLIENT_COMMUNICATION_SCRIPT_REQUIRED",
+      });
+    }
+
+    const policyEvaluation = await this.evaluateExternalCommunicationPolicy({
+      workspaceId: input.workspaceId,
+      actorId: input.actorId,
+      body: {
+        channel: body.channel,
+        clientProfileId: body.clientProfileId,
+        leadId: body.leadId,
+        scriptArtifactId: body.scriptArtifactId,
+      },
+    });
+
+    await this.audit.append({
+      workspaceId: input.workspaceId,
+      actorType: "system",
+      actorId: "ClientCommunicationService",
+      action: "communication_draft.policy_checked",
+      sourceArtifactIds: [scriptArtifact.id],
+      targetArtifactIds: [scriptArtifact.id],
+      status: policyEvaluation.allowed ? "success" : "blocked",
+      eventJson: {
+        channel: body.channel,
+        clientProfileId: body.clientProfileId,
+        leadId: body.leadId ?? null,
+        scriptArtifactId: scriptArtifact.id,
+        policyAllowed: policyEvaluation.allowed,
+        blockers: policyEvaluation.blockers,
+      },
+    });
+
+    const subject =
+      body.subject ??
+      (body.channel === "email_draft"
+        ? `Discovery follow-up for ${client.company}`
+        : body.channel === "meeting_draft"
+          ? `Meeting draft for ${client.company}`
+          : `Voice draft for ${client.company}`);
+    const draftBody = [
+      `Draft channel: ${body.channel}`,
+      `Client: ${client.name} (${client.company})`,
+      lead ? `Lead: ${lead.title}` : "Lead: not attached",
+      "",
+      "Purpose:",
+      "Prepare an owner-reviewable client communication draft inside Revealth.",
+      "",
+      "Message draft:",
+      `Hi ${client.name},`,
+      "Thank you for sharing the current need. Revealth is preparing a governed discovery plan that keeps approvals, consent, and audit evidence visible before any external communication occurs.",
+      "The next safe step is for the owner to review this draft and decide whether it should remain internal, be revised, or move toward a future approved external workflow.",
+      "",
+      "Safety note:",
+      "This draft is internal only. No email, meeting, voice call, SMS, calendar event, or external message has been sent.",
+    ].join("\n");
+
+    const draft = await this.db.communicationDraft.create({
+      data: {
+        workspaceId: input.workspaceId,
+        clientProfileId: body.clientProfileId,
+        leadId: body.leadId ?? null,
+        scriptArtifactId: scriptArtifact.id,
+        channel: body.channel,
+        subject,
+        body: draftBody,
+        status: "pending_approval",
+        policyEvaluationJson: policyEvaluation as unknown as Prisma.InputJsonObject,
+        createdByAgentRole: body.createdByAgentRole,
+        approvedAt: null,
+      },
+    });
+
+    await this.audit.append({
+      workspaceId: input.workspaceId,
+      actorType: "system",
+      actorId: "ClientCommunicationService",
+      action: "communication_draft.generated",
+      sourceArtifactIds: [scriptArtifact.id],
+      targetArtifactIds: [scriptArtifact.id],
+      status: "success",
+      eventJson: {
+        communicationDraftId: draft.id,
+        channel: draft.channel,
+        clientProfileId: draft.clientProfileId,
+        leadId: draft.leadId,
+        scriptArtifactId: draft.scriptArtifactId,
+        status: draft.status,
+        externalSendAllowed: false,
+      },
+    });
+    await this.audit.append({
+      workspaceId: input.workspaceId,
+      actorType: "system",
+      actorId: "ClientCommunicationService",
+      action: "communication_draft.approval_required",
+      sourceArtifactIds: [scriptArtifact.id],
+      targetArtifactIds: [scriptArtifact.id],
+      status: "blocked",
+      eventJson: {
+        communicationDraftId: draft.id,
+        channel: draft.channel,
+        requiredApproval: "Owner must approve this internal draft before any future external communication workflow can be considered.",
+      },
+    });
+
+    return draft;
+  }
+
+
   async evaluateExternalCommunicationPolicy(input: {
     workspaceId: string;
     actorId: string;
@@ -540,6 +691,7 @@ export class ClientCommunicationService {
         code: "CLIENT_PROFILE_NOT_FOUND",
       });
     }
+    return client;
   }
 
   private async assertLead(workspaceId: string, leadId: string) {
@@ -550,5 +702,6 @@ export class ClientCommunicationService {
         code: "LEAD_NOT_FOUND",
       });
     }
+    return lead;
   }
 }

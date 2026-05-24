@@ -110,71 +110,74 @@ export class ApprovalService {
       });
     }
 
-    const result = await this.db.$transaction(async (tx) => {
-      const approval = await tx.approval.update({
-        where: { id: input.approvalId },
-        data: {
-          status: input.status,
-          approverId: input.approverId,
-          decisionNotes: input.decisionNotes,
-          decidedAt: new Date(),
-        },
-      });
-
-      const artifactStatus =
-        input.status === "approved" ? "approved" : input.status === "rejected" ? "rejected" : "draft";
-      const updatedArtifact = await tx.artifact.update({
-        where: { id: existing.artifactId },
-        data: { status: artifactStatus },
-      });
-
-      const workflow = await tx.workflowRun.findFirst({
-        where: {
-          workspaceId: input.workspaceId,
-          status: "waiting_for_approval",
-          outputJson: {
-            path: ["approvalId"],
-            equals: input.approvalId,
-          },
-        },
-      });
-
-      const updatedWorkflow = workflow
-        ? await tx.workflowRun.update({
-            where: { id: workflow.id },
-            data: {
-              status: workflowStatusByDecision[input.status],
-              outputJson: {
-                ...((workflow.outputJson as Record<string, unknown> | null) ?? {}),
-                approvalDecision: input.status,
-                decidedAt: new Date().toISOString(),
-              } as Prisma.InputJsonObject,
-              completedAt: new Date(),
-            },
-          })
-        : null;
-
-      const audit = await tx.auditLog.create({
-        data: {
-          workspaceId: input.workspaceId,
-          workflowRunId: updatedWorkflow?.id ?? null,
-          actorType: "human",
-          actorId: input.approverId,
-          action: `approval.${input.status}`,
-          sourceArtifactIds: [existing.artifactId],
-          targetArtifactIds: [updatedArtifact.id],
-          approvalId: approval.id,
-          status: "success",
-          eventJson: {
+    const result = await this.db.$transaction(
+      async (tx) => {
+        const approval = await tx.approval.update({
+          where: { id: input.approvalId },
+          data: {
+            status: input.status,
+            approverId: input.approverId,
             decisionNotes: input.decisionNotes,
-            artifactStatus,
-            workflowStatus: updatedWorkflow?.status ?? null,
+            decidedAt: new Date(),
           },
-        },
-      });
+        });
 
-      return { approval, updatedArtifact, updatedWorkflow, audit };
-    });
+        const artifactStatus =
+          input.status === "approved" ? "approved" : input.status === "rejected" ? "rejected" : "draft";
+        const updatedArtifact = await tx.artifact.update({
+          where: { id: existing.artifactId },
+          data: { status: artifactStatus },
+        });
+
+        const workflow = await tx.workflowRun.findFirst({
+          where: {
+            workspaceId: input.workspaceId,
+            status: "waiting_for_approval",
+            outputJson: {
+              path: ["approvalId"],
+              equals: input.approvalId,
+            },
+          },
+        });
+
+        const updatedWorkflow = workflow
+          ? await tx.workflowRun.update({
+              where: { id: workflow.id },
+              data: {
+                status: workflowStatusByDecision[input.status],
+                outputJson: {
+                  ...((workflow.outputJson as Record<string, unknown> | null) ?? {}),
+                  approvalDecision: input.status,
+                  decidedAt: new Date().toISOString(),
+                } as Prisma.InputJsonObject,
+                completedAt: new Date(),
+              },
+            })
+          : null;
+
+        const audit = await tx.auditLog.create({
+          data: {
+            workspaceId: input.workspaceId,
+            workflowRunId: updatedWorkflow?.id ?? null,
+            actorType: "human",
+            actorId: input.approverId,
+            action: `approval.${input.status}`,
+            sourceArtifactIds: [existing.artifactId],
+            targetArtifactIds: [updatedArtifact.id],
+            approvalId: approval.id,
+            status: "success",
+            eventJson: {
+              decisionNotes: input.decisionNotes,
+              artifactStatus,
+              workflowStatus: updatedWorkflow?.status ?? null,
+            },
+          },
+        });
+
+        return { approval, updatedArtifact, updatedWorkflow, audit };
+      },
+      { timeout: 15_000 },
+    );
 
     await this.audit.append({
       workspaceId: input.workspaceId,

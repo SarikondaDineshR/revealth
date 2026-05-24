@@ -10,6 +10,7 @@ function createDb() {
     leads: [] as Record<string, unknown>[],
     conversations: [] as Record<string, unknown>[],
     meetingRequests: [] as Record<string, unknown>[],
+    drafts: [] as Record<string, unknown>[],
     policies: [] as Record<string, unknown>[],
     artifacts: [] as Record<string, unknown>[],
     approvals: [] as Record<string, unknown>[],
@@ -63,6 +64,15 @@ function createDb() {
           const request = { id: `meeting-${state.meetingRequests.length + 1}`, createdAt: new Date(), ...data };
           state.meetingRequests.push(request);
           return request;
+        },
+      },
+      communicationDraft: {
+        findMany: async ({ where }: { where: { workspaceId: string } }) =>
+          state.drafts.filter((draft) => draft.workspaceId === where.workspaceId),
+        create: async ({ data }: { data: Record<string, unknown> }) => {
+          const draft = { id: `draft-${state.drafts.length + 1}`, createdAt: new Date(), ...data };
+          state.drafts.push(draft);
+          return draft;
         },
       },
       externalCommunicationPolicy: {
@@ -282,5 +292,52 @@ describe("ClientCommunicationService", () => {
     expect(evaluation.requiredConsent).toHaveLength(1);
     expect(state.policies).toHaveLength(1);
     expect(state.audits.map((audit) => audit.action)).toContain("external_communication_policy.evaluated");
+  });
+
+  it("creates pending approval communication drafts without external side effects", async () => {
+    const { db, state } = createDb();
+    const service = new ClientCommunicationService(db as never);
+    const client = await service.createClient({
+      workspaceId,
+      actorId,
+      body: { name: "Dorothy Vaughan", company: "Safe Drafts Inc", status: "lead", source: "demo", notes: "Demo client." },
+    });
+    const lead = await service.createLead({
+      workspaceId,
+      actorId,
+      body: {
+        clientProfileId: client.id,
+        title: "Draft-only outreach",
+        needSummary: "Needs an internal email draft.",
+        urgency: "medium",
+        stage: "discovery",
+        ownerAgentRole: "Sales Agent",
+      },
+    });
+    const script = await service.generateClientCommunicationScript({ workspaceId, leadId: lead.id, actorId });
+    Object.assign(state.artifacts[0]!, { status: "approved" });
+    Object.assign(state.approvals[0]!, { status: "approved", decidedAt: new Date() });
+
+    const draft = await service.createCommunicationDraft({
+      workspaceId,
+      actorId,
+      body: {
+        clientProfileId: client.id,
+        leadId: lead.id,
+        scriptArtifactId: script.id,
+        channel: "email_draft",
+        createdByAgentRole: "Sales Agent",
+      },
+    });
+
+    expect(draft).toMatchObject({ channel: "email_draft", status: "pending_approval" });
+    expect(String(draft.body)).toContain("No email, meeting, voice call, SMS, calendar event, or external message has been sent.");
+    expect(state.audits.map((audit) => audit.action)).toEqual(
+      expect.arrayContaining([
+        "communication_draft.policy_checked",
+        "communication_draft.generated",
+        "communication_draft.approval_required",
+      ]),
+    );
   });
 });

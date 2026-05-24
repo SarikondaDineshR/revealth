@@ -297,6 +297,24 @@ export function ControlPlaneDashboardView({
         </div>
       </Section>
 
+      <Section title="Communication Drafts Awaiting Approval">
+        <CountStrip counts={dashboard.communicationDraftStatusCounts} />
+        <div className="table-list">
+          {dashboard.communicationDrafts.slice(0, 8).map((draft) => (
+            <div className="row" key={draft.id}>
+              <span>{draft.subject ?? draft.channel}</span>
+              <Badge status={draft.status} />
+              <span className="muted">
+                {draft.clientProfile?.company ?? "Client"} - internal draft only
+              </span>
+            </div>
+          ))}
+          {dashboard.communicationDrafts.length === 0 ? (
+            <p className="muted">No communication drafts are waiting for approval.</p>
+          ) : null}
+        </div>
+      </Section>
+
       <div className="grid two">
         <Section title="Recommended AI Team Scaling">
           {latestWorkforcePlan && workforceContent ? (

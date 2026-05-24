@@ -227,6 +227,23 @@ export interface ExternalCommunicationPolicy {
   createdAt: string;
 }
 
+export interface CommunicationDraft {
+  id: string;
+  workspaceId: string;
+  clientProfileId: string;
+  clientProfile?: ClientProfile;
+  leadId: string | null;
+  scriptArtifactId: string | null;
+  channel: "email_draft" | "meeting_draft" | "voice_draft";
+  subject: string | null;
+  body: string;
+  status: "draft" | "pending_approval" | "approved" | "rejected";
+  policyEvaluationJson: unknown;
+  createdByAgentRole: string;
+  approvedAt: string | null;
+  createdAt: string;
+}
+
 export interface RepoStatus {
   currentBranch: string;
   isClean: boolean;
@@ -291,6 +308,8 @@ export interface ControlPlaneDashboard {
   clientCommunicationScripts: ClientCommunicationScript[];
   externalCommunicationPolicies: ExternalCommunicationPolicy[];
   latestExternalCommunicationPolicyEvaluation: AuditEvent | null;
+  communicationDrafts: CommunicationDraft[];
+  communicationDraftStatusCounts: Record<string, number>;
 }
 
 export const api = {

@@ -388,6 +388,36 @@ const dashboard: ControlPlaneDashboard = {
     eventJson: {},
     createdAt: "2026-05-23T00:00:00.000Z",
   },
+  communicationDrafts: [
+    {
+      id: "draft-1",
+      workspaceId: "workspace-1",
+      clientProfileId: "client-1",
+      clientProfile: {
+        id: "client-1",
+        workspaceId: "workspace-1",
+        name: "Ada Lovelace",
+        company: "Analytical Engines LLC",
+        email: "ada@example.com",
+        phone: null,
+        status: "lead",
+        source: "demo",
+        notes: "Interested in governed software planning.",
+        createdAt: "2026-05-23T00:00:00.000Z",
+      },
+      leadId: "lead-1",
+      scriptArtifactId: "artifact-client-script",
+      channel: "email_draft",
+      subject: "Discovery follow-up",
+      body: "Internal draft only.",
+      status: "pending_approval",
+      policyEvaluationJson: {},
+      createdByAgentRole: "Sales Agent",
+      approvedAt: null,
+      createdAt: "2026-05-23T00:00:00.000Z",
+    },
+  ],
+  communicationDraftStatusCounts: { pending_approval: 1 },
 };
 
 describe("ControlPlaneDashboardView", () => {
@@ -412,8 +442,10 @@ describe("ControlPlaneDashboardView", () => {
     expect(html).toContain("Meeting Requests");
     expect(html).toContain("Sales/Support Script Drafts");
     expect(html).toContain("External Communication Readiness");
+    expect(html).toContain("Communication Drafts Awaiting Approval");
     expect(html).toContain("Blocked by default");
     expect(html).toContain("email_draft");
+    expect(html).toContain("Discovery follow-up");
     expect(html).toContain("Analytical Engines LLC");
     expect(html).toContain("No external joining");
     expect(html).toContain("QA Agent");

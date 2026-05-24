@@ -142,6 +142,18 @@ if ($policyEvaluation.allowed -ne $false) { throw "Expected external communicati
 if (-not ($policyEvaluation.blockers | Where-Object { $_ -eq "consent_granted_required" })) {
   throw "Expected policy evaluation to require granted consent for external channels."
 }
+Approve-Artifact -WorkspaceId $workspace.id -Artifact $clientScript -Notes "Smoke: approve client communication script for internal draft generation." | Out-Null
+
+$communicationDraft = (Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/client-communication/drafts" -Body (@{
+  clientProfileId = $client.id
+  leadId = $lead.id
+  scriptArtifactId = $clientScript.id
+  channel = "email_draft"
+  createdByAgentRole = "Sales Agent"
+} | ConvertTo-Json)).data
+if ($communicationDraft.status -ne "pending_approval") { throw "Expected communication draft pending approval." }
+if ($communicationDraft.channel -ne "email_draft") { throw "Expected email_draft communication draft." }
+if ($communicationDraft.body -notmatch "No email") { throw "Expected communication draft to state no external sending occurred." }
 
 $githubBatch = Wait-ForArtifactType -WorkspaceId $workspace.id -ArtifactType "github_issue_batch"
 Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/github/connections" -Body (@{ repository = "draft/repository" } | ConvertTo-Json) | Out-Null
@@ -203,6 +215,9 @@ if (-not $controlPlane.externalCommunicationPolicies -or $controlPlane.externalC
 }
 if (-not $controlPlane.latestExternalCommunicationPolicyEvaluation) {
   throw "Control plane external communication policy evaluation missing."
+}
+if (-not $controlPlane.communicationDrafts -or $controlPlane.communicationDrafts.Count -lt 1) {
+  throw "Control plane communication drafts missing."
 }
 
 Write-Host "Smoke test passed."

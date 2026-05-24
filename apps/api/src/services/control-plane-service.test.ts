@@ -217,6 +217,19 @@ describe("ControlPlaneService aggregation", () => {
           },
         ],
       },
+      communicationDraft: {
+        findMany: async () => [
+          {
+            id: "draft-1",
+            clientProfileId: "client-1",
+            channel: "email_draft",
+            subject: "Discovery follow-up",
+            body: "Internal draft only.",
+            status: "pending_approval",
+            createdByAgentRole: "Sales Agent",
+          },
+        ],
+      },
     };
     const service = new ControlPlaneService(
       db as never,
@@ -265,6 +278,8 @@ describe("ControlPlaneService aggregation", () => {
     expect(dashboard.clientCommunicationScripts).toHaveLength(1);
     expect(dashboard.externalCommunicationPolicies).toHaveLength(1);
     expect(dashboard.latestExternalCommunicationPolicyEvaluation?.status).toBe("blocked");
+    expect(dashboard.communicationDrafts).toHaveLength(1);
+    expect(dashboard.communicationDraftStatusCounts).toEqual({ pending_approval: 1 });
     expect(dashboard.workflowStatusCounts).toEqual({ completed: 1 });
   });
 });

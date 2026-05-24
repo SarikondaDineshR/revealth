@@ -6,6 +6,12 @@ Revealth v0.1 focuses on governed software planning and SDLC orchestration. It t
 
 v0.1 is intentionally safety-first. It does not perform live code execution, create branches, open pull requests, deploy software, bill customers, or run autonomous customer-facing automation.
 
+## v0.2 Status
+
+v0.2 stabilizes the Codespaces-first demo path, improves the control-plane dashboard, and hardens future live-execution safety checks. Live execution, branch creation, pull request creation, and repository mutation by the executor remain intentionally blocked.
+
+See [v0.2 freeze notes](docs/v0.2-freeze-notes.md).
+
 ## Architecture Overview
 
 Revealth is a TypeScript monorepo with a governance plane, workflow plane, execution-preparation plane, and operator UI.

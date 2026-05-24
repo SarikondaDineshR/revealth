@@ -162,6 +162,16 @@ if ($draftApproval.draft.status -ne "approved") { throw "Expected approved commu
 if ($draftApproval.authorization.status -ne "authorized_draft_only") { throw "Expected authorized_draft_only outbound authorization." }
 if ($draftApproval.authorization.externalSendEnabled -ne $false) { throw "Expected outbound authorization externalSendEnabled false." }
 
+$reviewPackage = (Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/client-communication/outbound-review-packages" -Body (@{
+  communicationDraftId = $draftApproval.draft.id
+  outboundAuthorizationId = $draftApproval.authorization.id
+} | ConvertTo-Json)).data
+if ($reviewPackage.status -ne "ready_for_human_review") { throw "Expected outbound review package ready_for_human_review." }
+if ($reviewPackage.externalSendEnabled -ne $false) { throw "Expected outbound review package externalSendEnabled false." }
+if (-not ($reviewPackage.blockers | Where-Object { $_ -eq "external_send_disabled" })) {
+  throw "Expected outbound review package to include external_send_disabled blocker."
+}
+
 $githubBatch = Wait-ForArtifactType -WorkspaceId $workspace.id -ArtifactType "github_issue_batch"
 Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/github/connections" -Body (@{ repository = "draft/repository" } | ConvertTo-Json) | Out-Null
 Approve-Artifact -WorkspaceId $workspace.id -Artifact $githubBatch -Notes "Smoke: approve GitHub issue batch dry-run." | Out-Null
@@ -231,6 +241,12 @@ if (-not $controlPlane.outboundAuthorizations -or $controlPlane.outboundAuthoriz
 }
 if (-not ($controlPlane.outboundAuthorizations | Where-Object { $_.externalSendEnabled -eq $false })) {
   throw "Expected outbound authorization to keep externalSendEnabled false."
+}
+if (-not $controlPlane.outboundReviewPackages -or $controlPlane.outboundReviewPackages.Count -lt 1) {
+  throw "Control plane outbound review packages missing."
+}
+if (-not ($controlPlane.outboundReviewPackages | Where-Object { $_.externalSendEnabled -eq $false })) {
+  throw "Expected outbound review package to keep externalSendEnabled false."
 }
 
 Write-Host "Smoke test passed."

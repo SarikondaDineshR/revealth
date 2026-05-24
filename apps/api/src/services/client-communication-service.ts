@@ -68,6 +68,11 @@ export const decideCommunicationDraftSchema = z.object({
   decisionNotes: z.string().trim().min(1).default("Owner reviewed communication draft."),
 });
 
+export const createOutboundReviewPackageSchema = z.object({
+  communicationDraftId: z.string().uuid(),
+  outboundAuthorizationId: z.string().uuid(),
+});
+
 type PolicyEvaluation = {
   allowed: boolean;
   blockers: string[];
@@ -414,6 +419,154 @@ export class ClientCommunicationService {
       orderBy: [{ status: "asc" }, { createdAt: "desc" }],
       take: 100,
     });
+  }
+
+  listOutboundReviewPackages(workspaceId: string) {
+    return this.db.outboundReviewPackage.findMany({
+      where: { workspaceId },
+      include: { communicationDraft: true, outboundAuthorization: true },
+      orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+      take: 100,
+    });
+  }
+
+  async createOutboundReviewPackage(input: {
+    workspaceId: string;
+    actorId: string;
+    body: z.input<typeof createOutboundReviewPackageSchema>;
+  }) {
+    await this.assertWorkspace(input.workspaceId);
+    const body = createOutboundReviewPackageSchema.parse(input.body);
+    const draft = await this.db.communicationDraft.findFirst({
+      where: { id: body.communicationDraftId, workspaceId: input.workspaceId },
+      include: { clientProfile: true },
+    });
+    if (!draft) {
+      throw Object.assign(new Error("Communication draft not found."), {
+        statusCode: 404,
+        code: "COMMUNICATION_DRAFT_NOT_FOUND",
+      });
+    }
+    if (draft.status !== "approved") {
+      throw Object.assign(new Error("Approved communication draft is required for outbound review package creation."), {
+        statusCode: 409,
+        code: "APPROVED_COMMUNICATION_DRAFT_REQUIRED",
+      });
+    }
+
+    const authorization = await this.db.outboundAuthorization.findFirst({
+      where: {
+        id: body.outboundAuthorizationId,
+        workspaceId: input.workspaceId,
+        communicationDraftId: draft.id,
+      },
+    });
+    if (!authorization) {
+      throw Object.assign(new Error("Outbound authorization not found."), {
+        statusCode: 404,
+        code: "OUTBOUND_AUTHORIZATION_NOT_FOUND",
+      });
+    }
+    if (authorization.status !== "authorized_draft_only") {
+      throw Object.assign(new Error("Draft-only outbound authorization is required for outbound review package creation."), {
+        statusCode: 409,
+        code: "AUTHORIZED_DRAFT_ONLY_REQUIRED",
+      });
+    }
+
+    const existing = await this.db.outboundReviewPackage.findFirst({
+      where: { workspaceId: input.workspaceId, outboundAuthorizationId: authorization.id },
+      include: { communicationDraft: true, outboundAuthorization: true },
+    });
+    if (existing) {
+      await this.audit.append({
+        workspaceId: input.workspaceId,
+        actorType: "system",
+        actorId: "ClientCommunicationService",
+        action: "outbound_review_package.generate.skipped",
+        sourceArtifactIds: draft.scriptArtifactId ? [draft.scriptArtifactId] : [],
+        targetArtifactIds: draft.scriptArtifactId ? [draft.scriptArtifactId] : [],
+        status: "success",
+        eventJson: {
+          outboundReviewPackageId: existing.id,
+          communicationDraftId: draft.id,
+          outboundAuthorizationId: authorization.id,
+          reason: "already_exists",
+          externalSendEnabled: false,
+        },
+      });
+      return existing;
+    }
+
+    const policyEvaluation = authorization.policyEvaluationJson;
+    const policySummary = this.extractPolicyReviewSummary(policyEvaluation);
+    const blockers = Array.from(
+      new Set([
+        ...policySummary.blockers,
+        ...(authorization.consentState === "granted" ? [] : ["consent_granted_required"]),
+        "external_send_disabled",
+      ]),
+    );
+    const requiredHumanAction =
+      blockers.length > 0
+        ? "Owner must review blockers, consent, and policy evidence before any future external channel is considered."
+        : "Owner must explicitly approve any future external-send implementation before delivery can exist.";
+    const nextSafeStep =
+      "Keep the approved draft internal. Review the package evidence and decide whether to revise, revoke, or prepare a future delivery request.";
+    const summary = `Review approved ${draft.channel} draft for ${draft.clientProfile.name} at ${draft.clientProfile.company}. External sending remains disabled.`;
+
+    const reviewPackage = await this.db.outboundReviewPackage.create({
+      data: {
+        workspaceId: input.workspaceId,
+        communicationDraftId: draft.id,
+        outboundAuthorizationId: authorization.id,
+        status: "ready_for_human_review",
+        summary,
+        consentState: authorization.consentState,
+        blockers,
+        requiredHumanAction,
+        nextSafeStep,
+        policyEvaluationJson: policyEvaluation as Prisma.InputJsonValue,
+        externalSendEnabled: false,
+      },
+      include: { communicationDraft: true, outboundAuthorization: true },
+    });
+
+    await this.audit.append({
+      workspaceId: input.workspaceId,
+      actorType: "human",
+      actorId: input.actorId,
+      action: "outbound_review_package.generate.requested",
+      sourceArtifactIds: draft.scriptArtifactId ? [draft.scriptArtifactId] : [],
+      targetArtifactIds: draft.scriptArtifactId ? [draft.scriptArtifactId] : [],
+      status: "success",
+      eventJson: {
+        communicationDraftId: draft.id,
+        outboundAuthorizationId: authorization.id,
+        externalSendEnabled: false,
+      },
+    });
+    await this.audit.append({
+      workspaceId: input.workspaceId,
+      actorType: "system",
+      actorId: "ClientCommunicationService",
+      action: "outbound_review_package.generated",
+      sourceArtifactIds: draft.scriptArtifactId ? [draft.scriptArtifactId] : [],
+      targetArtifactIds: draft.scriptArtifactId ? [draft.scriptArtifactId] : [],
+      status: "success",
+      eventJson: {
+        outboundReviewPackageId: reviewPackage.id,
+        communicationDraftId: draft.id,
+        outboundAuthorizationId: authorization.id,
+        consentState: authorization.consentState,
+        blockers,
+        requiredHumanAction,
+        nextSafeStep,
+        externalSendEnabled: false,
+      },
+    });
+
+    return reviewPackage;
   }
 
   async createCommunicationDraft(input: {
@@ -825,5 +978,19 @@ export class ClientCommunicationService {
       if (parsed.success) return parsed.data;
     }
     return "unknown";
+  }
+
+  private extractPolicyReviewSummary(policyEvaluation: unknown): { blockers: string[]; nextSafeAction: string | null } {
+    if (!policyEvaluation || typeof policyEvaluation !== "object" || Array.isArray(policyEvaluation)) {
+      return { blockers: [], nextSafeAction: null };
+    }
+    const record = policyEvaluation as Record<string, unknown>;
+    const blockers = Array.isArray(record.blockers)
+      ? record.blockers.filter((blocker): blocker is string => typeof blocker === "string")
+      : [];
+    return {
+      blockers,
+      nextSafeAction: typeof record.nextSafeAction === "string" ? record.nextSafeAction : null,
+    };
   }
 }

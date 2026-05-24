@@ -252,6 +252,36 @@ describe("ControlPlaneService aggregation", () => {
           },
         ],
       },
+      outboundReviewPackage: {
+        findMany: async () => [
+          {
+            id: "review-package-1",
+            workspaceId: workspace.id,
+            communicationDraftId: "draft-1",
+            outboundAuthorizationId: "authorization-1",
+            communicationDraft: {
+              id: "draft-1",
+              channel: "email_draft",
+              status: "approved",
+              subject: "Discovery follow-up",
+            },
+            outboundAuthorization: {
+              id: "authorization-1",
+              status: "authorized_draft_only",
+              externalSendEnabled: false,
+            },
+            status: "ready_for_human_review",
+            summary: "Review approved email draft.",
+            consentState: "unknown",
+            blockers: ["consent_granted_required", "external_send_disabled"],
+            requiredHumanAction: "Owner must review blockers.",
+            nextSafeStep: "Keep the approved draft internal.",
+            policyEvaluationJson: {},
+            externalSendEnabled: false,
+            createdAt: new Date("2026-05-23T00:00:00.000Z"),
+          },
+        ],
+      },
     };
     const service = new ControlPlaneService(
       db as never,
@@ -304,6 +334,8 @@ describe("ControlPlaneService aggregation", () => {
     expect(dashboard.communicationDraftStatusCounts).toEqual({ pending_approval: 1 });
     expect(dashboard.outboundAuthorizations).toHaveLength(1);
     expect(dashboard.outboundAuthorizationStatusCounts).toEqual({ authorized_draft_only: 1 });
+    expect(dashboard.outboundReviewPackages).toHaveLength(1);
+    expect(dashboard.outboundReviewPackageStatusCounts).toEqual({ ready_for_human_review: 1 });
     expect(dashboard.workflowStatusCounts).toEqual({ completed: 1 });
   });
 });

@@ -12,6 +12,7 @@ function createDb() {
     meetingRequests: [] as Record<string, unknown>[],
     drafts: [] as Record<string, unknown>[],
     authorizations: [] as Record<string, unknown>[],
+    reviewPackages: [] as Record<string, unknown>[],
     policies: [] as Record<string, unknown>[],
     artifacts: [] as Record<string, unknown>[],
     approvals: [] as Record<string, unknown>[],
@@ -70,10 +71,13 @@ function createDb() {
       communicationDraft: {
         findMany: async ({ where }: { where: { workspaceId: string } }) =>
           state.drafts.filter((draft) => draft.workspaceId === where.workspaceId),
-        findFirst: async ({ where }: { where: { id: string; workspaceId: string } }) =>
-          state.drafts.find((draft) => draft.id === where.id && draft.workspaceId === where.workspaceId) ?? null,
+        findFirst: async ({ where }: { where: { id: string; workspaceId: string } }) => {
+          const draft = state.drafts.find((candidate) => candidate.id === where.id && candidate.workspaceId === where.workspaceId);
+          const clientProfile = state.clients.find((client) => client.id === draft?.clientProfileId);
+          return draft ? { ...draft, clientProfile } : null;
+        },
         create: async ({ data }: { data: Record<string, unknown> }) => {
-          const draft = { id: `draft-${state.drafts.length + 1}`, createdAt: new Date(), ...data };
+          const draft = { id: `66666666-6666-4666-8666-00000000000${state.drafts.length + 1}`, createdAt: new Date(), ...data };
           state.drafts.push(draft);
           return draft;
         },
@@ -86,10 +90,32 @@ function createDb() {
       outboundAuthorization: {
         findMany: async ({ where }: { where: { workspaceId: string } }) =>
           state.authorizations.filter((authorization) => authorization.workspaceId === where.workspaceId),
+        findFirst: async ({ where }: { where: { id?: string; workspaceId: string; communicationDraftId?: string } }) =>
+          state.authorizations.find(
+            (authorization) =>
+              authorization.workspaceId === where.workspaceId &&
+              (!where.id || authorization.id === where.id) &&
+              (!where.communicationDraftId || authorization.communicationDraftId === where.communicationDraftId),
+          ) ?? null,
         create: async ({ data }: { data: Record<string, unknown> }) => {
-          const authorization = { id: `authorization-${state.authorizations.length + 1}`, createdAt: new Date(), ...data };
+          const authorization = { id: `77777777-7777-4777-8777-00000000000${state.authorizations.length + 1}`, createdAt: new Date(), ...data };
           state.authorizations.push(authorization);
           return authorization;
+        },
+      },
+      outboundReviewPackage: {
+        findMany: async ({ where }: { where: { workspaceId: string } }) =>
+          state.reviewPackages.filter((reviewPackage) => reviewPackage.workspaceId === where.workspaceId),
+        findFirst: async ({ where }: { where: { workspaceId: string; outboundAuthorizationId: string } }) =>
+          state.reviewPackages.find(
+            (reviewPackage) =>
+              reviewPackage.workspaceId === where.workspaceId &&
+              reviewPackage.outboundAuthorizationId === where.outboundAuthorizationId,
+          ) ?? null,
+        create: async ({ data }: { data: Record<string, unknown> }) => {
+          const reviewPackage = { id: `review-package-${state.reviewPackages.length + 1}`, createdAt: new Date(), ...data };
+          state.reviewPackages.push(reviewPackage);
+          return reviewPackage;
         },
       },
       externalCommunicationPolicy: {
@@ -408,6 +434,67 @@ describe("ClientCommunicationService", () => {
     });
     expect(state.audits.map((audit) => audit.action)).toEqual(
       expect.arrayContaining(["communication_draft.approved", "outbound_authorization.created"]),
+    );
+  });
+
+  it("creates outbound review packages for approved drafts and draft-only authorizations", async () => {
+    const { db, state } = createDb();
+    const service = new ClientCommunicationService(db as never);
+    const client = await service.createClient({
+      workspaceId,
+      actorId,
+      body: { name: "Annie Easley", company: "Review Gates Inc", status: "lead", source: "demo", notes: "Demo client." },
+    });
+    const lead = await service.createLead({
+      workspaceId,
+      actorId,
+      body: {
+        clientProfileId: client.id,
+        title: "Outbound review",
+        needSummary: "Needs human review package before any external action.",
+        urgency: "medium",
+        stage: "discovery",
+        ownerAgentRole: "Sales Agent",
+      },
+    });
+    const script = await service.generateClientCommunicationScript({ workspaceId, leadId: lead.id, actorId });
+    Object.assign(state.artifacts[0]!, { status: "approved" });
+    Object.assign(state.approvals[0]!, { status: "approved", decidedAt: new Date() });
+    const draft = await service.createCommunicationDraft({
+      workspaceId,
+      actorId,
+      body: {
+        clientProfileId: client.id,
+        leadId: lead.id,
+        scriptArtifactId: script.id,
+        channel: "email_draft",
+      },
+    });
+    const decision = await service.decideCommunicationDraft({
+      workspaceId,
+      draftId: draft.id,
+      actorId,
+      decision: "approved",
+      body: { decisionNotes: "Approve draft readiness only." },
+    });
+
+    const reviewPackage = await service.createOutboundReviewPackage({
+      workspaceId,
+      actorId,
+      body: {
+        communicationDraftId: decision.draft.id,
+        outboundAuthorizationId: decision.authorization.id,
+      },
+    });
+
+    expect(reviewPackage).toMatchObject({
+      status: "ready_for_human_review",
+      consentState: "unknown",
+      externalSendEnabled: false,
+    });
+    expect(reviewPackage.blockers).toEqual(expect.arrayContaining(["consent_granted_required", "external_send_disabled"]));
+    expect(state.audits.map((audit) => audit.action)).toEqual(
+      expect.arrayContaining(["outbound_review_package.generate.requested", "outbound_review_package.generated"]),
     );
   });
 });

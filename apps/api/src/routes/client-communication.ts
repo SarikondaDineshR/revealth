@@ -7,6 +7,7 @@ import {
   createClientLeadSchema,
   createClientProfileSchema,
   createMeetingRequestSchema,
+  createOutboundReviewPackageSchema,
   decideCommunicationDraftSchema,
   evaluateExternalCommunicationPolicySchema,
 } from "../services/client-communication-service.js";
@@ -147,6 +148,23 @@ export async function registerClientCommunicationRoutes(app: FastifyInstance): P
   app.get("/workspaces/:workspaceId/client-communication/outbound-authorizations", async (request) => {
     const { workspaceId } = request.params as { workspaceId: string };
     const data = await service.listOutboundAuthorizations(workspaceId);
+    return { data, error: null, requestId: request.requestId };
+  });
+
+  app.get("/workspaces/:workspaceId/client-communication/outbound-review-packages", async (request) => {
+    const { workspaceId } = request.params as { workspaceId: string };
+    const data = await service.listOutboundReviewPackages(workspaceId);
+    return { data, error: null, requestId: request.requestId };
+  });
+
+  app.post("/workspaces/:workspaceId/client-communication/outbound-review-packages", async (request) => {
+    const { workspaceId } = request.params as { workspaceId: string };
+    const body = createOutboundReviewPackageSchema.parse(request.body ?? {});
+    const data = await service.createOutboundReviewPackage({
+      workspaceId,
+      actorId: request.actor.id,
+      body,
+    });
     return { data, error: null, requestId: request.requestId };
   });
 }

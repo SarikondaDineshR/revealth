@@ -258,6 +258,24 @@ export interface OutboundAuthorization {
   createdAt: string;
 }
 
+export interface OutboundReviewPackage {
+  id: string;
+  workspaceId: string;
+  communicationDraftId: string;
+  communicationDraft?: CommunicationDraft;
+  outboundAuthorizationId: string;
+  outboundAuthorization?: OutboundAuthorization;
+  status: "ready_for_human_review";
+  summary: string;
+  consentState: "unknown" | "required" | "granted" | "revoked";
+  blockers: string[];
+  requiredHumanAction: string;
+  nextSafeStep: string;
+  policyEvaluationJson: unknown;
+  externalSendEnabled: boolean;
+  createdAt: string;
+}
+
 export interface RepoStatus {
   currentBranch: string;
   isClean: boolean;
@@ -326,6 +344,8 @@ export interface ControlPlaneDashboard {
   communicationDraftStatusCounts: Record<string, number>;
   outboundAuthorizations: OutboundAuthorization[];
   outboundAuthorizationStatusCounts: Record<string, number>;
+  outboundReviewPackages: OutboundReviewPackage[];
+  outboundReviewPackageStatusCounts: Record<string, number>;
 }
 
 export const api = {

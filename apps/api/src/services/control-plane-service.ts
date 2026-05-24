@@ -85,6 +85,7 @@ export class ControlPlaneService {
       externalCommunicationPolicies,
       communicationDrafts,
       outboundAuthorizations,
+      outboundReviewPackages,
       executorHealth,
       executorRepoStatus,
     ] = await Promise.all([
@@ -104,6 +105,7 @@ export class ControlPlaneService {
       this.db.externalCommunicationPolicy.findMany({ where: { workspaceId }, orderBy: [{ status: "asc" }, { createdAt: "desc" }], take: 50 }),
       this.db.communicationDraft.findMany({ where: { workspaceId }, include: { clientProfile: true }, orderBy: [{ status: "asc" }, { createdAt: "desc" }], take: 100 }),
       this.db.outboundAuthorization.findMany({ where: { workspaceId }, include: { communicationDraft: true }, orderBy: [{ status: "asc" }, { createdAt: "desc" }], take: 100 }),
+      this.db.outboundReviewPackage.findMany({ where: { workspaceId }, include: { communicationDraft: true, outboundAuthorization: true }, orderBy: [{ status: "asc" }, { createdAt: "desc" }], take: 100 }),
       this.getExecutorHealth(),
       this.getExecutorRepoStatus(),
     ]);
@@ -179,6 +181,8 @@ export class ControlPlaneService {
       communicationDraftStatusCounts: countByStatus(communicationDrafts),
       outboundAuthorizations,
       outboundAuthorizationStatusCounts: countByStatus(outboundAuthorizations),
+      outboundReviewPackages,
+      outboundReviewPackageStatusCounts: countByStatus(outboundReviewPackages),
       githubIssues,
       agentAssignments,
       agentMessages,

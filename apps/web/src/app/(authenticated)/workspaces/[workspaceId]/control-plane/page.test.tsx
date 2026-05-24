@@ -433,6 +433,39 @@ const dashboard: ControlPlaneDashboard = {
     },
   ],
   outboundAuthorizationStatusCounts: { authorized_draft_only: 1 },
+  outboundReviewPackages: [
+    {
+      id: "review-package-1",
+      workspaceId: "workspace-1",
+      communicationDraftId: "draft-1",
+      communicationDraft: {
+        id: "draft-1",
+        workspaceId: "workspace-1",
+        clientProfileId: "client-1",
+        leadId: "lead-1",
+        scriptArtifactId: "artifact-client-script",
+        channel: "email_draft",
+        subject: "Discovery follow-up",
+        body: "Internal draft only.",
+        status: "approved",
+        policyEvaluationJson: {},
+        createdByAgentRole: "Sales Agent",
+        approvedAt: "2026-05-23T00:00:00.000Z",
+        createdAt: "2026-05-23T00:00:00.000Z",
+      },
+      outboundAuthorizationId: "authorization-1",
+      status: "ready_for_human_review",
+      summary: "Review approved email draft.",
+      consentState: "unknown",
+      blockers: ["consent_granted_required", "external_send_disabled"],
+      requiredHumanAction: "Owner must review blockers.",
+      nextSafeStep: "Keep the approved draft internal.",
+      policyEvaluationJson: {},
+      externalSendEnabled: false,
+      createdAt: "2026-05-23T00:00:00.000Z",
+    },
+  ],
+  outboundReviewPackageStatusCounts: { ready_for_human_review: 1 },
 };
 
 describe("ControlPlaneDashboardView", () => {
@@ -459,6 +492,9 @@ describe("ControlPlaneDashboardView", () => {
     expect(html).toContain("External Communication Readiness");
     expect(html).toContain("Communication Drafts Awaiting Approval");
     expect(html).toContain("Outbound Authorization Readiness");
+    expect(html).toContain("Outbound Review Package");
+    expect(html).toContain("ready_for_human_review");
+    expect(html).toContain("Keep the approved draft internal.");
     expect(html).toContain("authorized_draft_only");
     expect(html).toContain("External sending disabled");
     expect(html).toContain("Blocked by default");

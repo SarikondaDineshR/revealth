@@ -38,6 +38,7 @@ model Workspace {
   externalCommunicationPolicies ExternalCommunicationPolicy[]
   communicationDrafts CommunicationDraft[]
   outboundAuthorizations OutboundAuthorization[]
+  outboundReviewPackages OutboundReviewPackage[]
   tasks       Task[]
   codexExecutionRuns CodexExecutionRun[]
   auditLogs   AuditLog[]
@@ -318,6 +319,7 @@ model CommunicationDraft {
   workspace            Workspace     @relation(fields: [workspaceId], references: [id])
   clientProfile        ClientProfile @relation(fields: [clientProfileId], references: [id])
   outboundAuthorizations OutboundAuthorization[]
+  outboundReviewPackages OutboundReviewPackage[]
   createdAt            DateTime      @default(now()) @map("created_at")
   updatedAt            DateTime      @updatedAt @map("updated_at")
 
@@ -339,12 +341,38 @@ model OutboundAuthorization {
   externalSendEnabled  Boolean            @default(false) @map("external_send_enabled")
   workspace            Workspace          @relation(fields: [workspaceId], references: [id])
   communicationDraft   CommunicationDraft @relation(fields: [communicationDraftId], references: [id])
+  outboundReviewPackages OutboundReviewPackage[]
   createdAt            DateTime           @default(now()) @map("created_at")
   updatedAt            DateTime           @updatedAt @map("updated_at")
 
   @@index([workspaceId, status])
   @@index([workspaceId, communicationDraftId])
   @@map("outbound_authorizations")
+}
+
+model OutboundReviewPackage {
+  id                      String                @id @default(uuid()) @db.Uuid
+  workspaceId             String                @map("workspace_id") @db.Uuid
+  communicationDraftId    String                @map("communication_draft_id") @db.Uuid
+  outboundAuthorizationId String                @map("outbound_authorization_id") @db.Uuid
+  status                  String
+  summary                 String
+  consentState            String                @map("consent_state")
+  blockers                String[]
+  requiredHumanAction     String                @map("required_human_action")
+  nextSafeStep            String                @map("next_safe_step")
+  policyEvaluationJson    Json                  @map("policy_evaluation_json")
+  externalSendEnabled     Boolean               @default(false) @map("external_send_enabled")
+  workspace               Workspace             @relation(fields: [workspaceId], references: [id])
+  communicationDraft      CommunicationDraft    @relation(fields: [communicationDraftId], references: [id])
+  outboundAuthorization   OutboundAuthorization @relation(fields: [outboundAuthorizationId], references: [id])
+  createdAt               DateTime              @default(now()) @map("created_at")
+  updatedAt               DateTime              @updatedAt @map("updated_at")
+
+  @@unique([workspaceId, outboundAuthorizationId])
+  @@index([workspaceId, status])
+  @@index([workspaceId, communicationDraftId])
+  @@map("outbound_review_packages")
 }
 
 model Task {

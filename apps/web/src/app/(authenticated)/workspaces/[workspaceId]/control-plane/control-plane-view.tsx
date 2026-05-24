@@ -333,6 +333,24 @@ export function ControlPlaneDashboardView({
         </div>
       </Section>
 
+      <Section title="Outbound Review Package">
+        <CountStrip counts={dashboard.outboundReviewPackageStatusCounts} />
+        <div className="table-list">
+          {dashboard.outboundReviewPackages.slice(0, 8).map((reviewPackage) => (
+            <div className="row" key={reviewPackage.id}>
+              <span>{reviewPackage.communicationDraft?.subject ?? reviewPackage.summary}</span>
+              <Badge status={reviewPackage.status} />
+              <span className="muted">
+                {reviewPackage.externalSendEnabled ? "External action enabled" : reviewPackage.nextSafeStep}
+              </span>
+            </div>
+          ))}
+          {dashboard.outboundReviewPackages.length === 0 ? (
+            <p className="muted">No outbound review package has been prepared yet.</p>
+          ) : null}
+        </div>
+      </Section>
+
       <div className="grid two">
         <Section title="Recommended AI Team Scaling">
           {latestWorkforcePlan && workforceContent ? (

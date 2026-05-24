@@ -159,6 +159,19 @@ const dashboard: ControlPlaneDashboard = {
       completedAt: null,
     },
   ],
+  activatedWorkforceAssignments: [
+    {
+      id: "assignment-2",
+      workspaceId: "workspace-1",
+      agentId: "qa",
+      role: "QA Agent",
+      currentTask: "Reviewing quality and acceptance criteria",
+      assignedArtifactId: "artifact-workforce-plan",
+      status: "working",
+      startedAt: "2026-05-23T00:00:00.000Z",
+      completedAt: null,
+    },
+  ],
   agentMessages: [
     {
       id: "message-1",
@@ -201,6 +214,8 @@ describe("ControlPlaneDashboardView", () => {
     expect(html).toContain("Lineage");
     expect(html).toContain("AI Team");
     expect(html).toContain("Recommended AI Team Scaling");
+    expect(html).toContain("Activated AI Team");
+    expect(html).toContain("QA Agent");
     expect(html).toContain("Who Is Working On What");
     expect(html).toContain("Agent Communication Feed");
     expect(html).toContain("Client-visible Updates");

@@ -84,6 +84,10 @@ Approve-Artifact -WorkspaceId $workspace.id -Artifact $taskBatch -Notes "Smoke: 
 $workforcePlan = (Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/artifacts/$($taskBatch.id)/workforce-scaling-plans").data
 if ($workforcePlan.artifactType -ne "workforce_scaling_plan") { throw "Expected workforce_scaling_plan artifact." }
 if ($workforcePlan.status -ne "pending_approval") { throw "Expected workforce_scaling_plan pending approval." }
+Approve-Artifact -WorkspaceId $workspace.id -Artifact $workforcePlan -Notes "Smoke: approve workforce scaling plan." | Out-Null
+$activation = (Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/artifacts/$($workforcePlan.id)/workforce/activate").data
+if ($activation.status -ne "activated") { throw "Expected activated workforce, received $($activation.status)" }
+if ($activation.createdAssignments.Count -lt 1) { throw "Expected workforce activation to create assignments." }
 
 $githubBatch = Wait-ForArtifactType -WorkspaceId $workspace.id -ArtifactType "github_issue_batch"
 Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/github/connections" -Body (@{ repository = "draft/repository" } | ConvertTo-Json) | Out-Null
@@ -115,6 +119,9 @@ if (-not $controlPlane.clientVisibleAgentMessages -or $controlPlane.clientVisibl
 }
 if (-not $controlPlane.workforceScalingPlans -or $controlPlane.workforceScalingPlans.Count -lt 1) {
   throw "Control plane workforce scaling plan missing."
+}
+if (-not $controlPlane.activatedWorkforceAssignments -or $controlPlane.activatedWorkforceAssignments.Count -lt 1) {
+  throw "Control plane activated workforce assignments missing."
 }
 
 Write-Host "Smoke test passed."

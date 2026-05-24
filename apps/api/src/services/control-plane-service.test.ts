@@ -98,6 +98,15 @@ describe("ControlPlaneService aggregation", () => {
             role: "Product Manager Agent",
             currentTask: "Planning your project",
             status: "working",
+            assignedArtifactId: null,
+          },
+          {
+            id: "assignment-2",
+            agentId: "qa",
+            role: "QA Agent",
+            currentTask: "Reviewing quality and acceptance criteria",
+            status: "working",
+            assignedArtifactId: "workforce-plan",
           },
         ],
       },
@@ -146,7 +155,8 @@ describe("ControlPlaneService aggregation", () => {
     expect(dashboard.readiness.latestPreflightStatus).toBe("passed");
     expect(dashboard.branchPreparationPlans).toHaveLength(1);
     expect(dashboard.workforceScalingPlans).toHaveLength(1);
-    expect(dashboard.agentAssignments).toHaveLength(1);
+    expect(dashboard.activatedWorkforceAssignments).toHaveLength(1);
+    expect(dashboard.agentAssignments).toHaveLength(2);
     expect(dashboard.clientVisibleAgentMessages).toHaveLength(1);
     expect(dashboard.workflowStatusCounts).toEqual({ completed: 1 });
   });

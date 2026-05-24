@@ -94,6 +94,10 @@ export class ControlPlaneService {
 
     const branchPreparationPlans = artifacts.filter((artifact: Artifact) => artifact.artifactType === "branch_preparation_plan");
     const workforceScalingPlans = artifacts.filter((artifact: Artifact) => artifact.artifactType === "workforce_scaling_plan");
+    const workforceScalingPlanIds = new Set(workforceScalingPlans.map((artifact) => artifact.id));
+    const activatedWorkforceAssignments = agentAssignments.filter((assignment) =>
+      assignment.assignedArtifactId ? workforceScalingPlanIds.has(assignment.assignedArtifactId) : false,
+    );
     const latestExecutionRun = executionRuns[0] ?? null;
     const latestPreflight = auditEvents.find((event: AuditLog) =>
       event.action === "codex.execution_run.preflight.passed" || event.action === "codex.execution_run.preflight.failed",
@@ -137,6 +141,7 @@ export class ControlPlaneService {
       auditEvents,
       branchPreparationPlans,
       workforceScalingPlans,
+      activatedWorkforceAssignments,
       githubIssues,
       agentAssignments,
       agentMessages,

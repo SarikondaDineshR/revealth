@@ -179,6 +179,7 @@ export interface ControlPlaneDashboard {
   workforceScalingPlans: WorkforceScalingPlan[];
   githubIssues: Array<{ id: string; title: string; status: string; dryRun: boolean; repository: string }>;
   agentAssignments: AgentAssignment[];
+  activatedWorkforceAssignments: AgentAssignment[];
   agentMessages: AgentMessage[];
   clientVisibleAgentMessages: AgentMessage[];
 }

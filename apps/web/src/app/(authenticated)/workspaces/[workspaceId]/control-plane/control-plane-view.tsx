@@ -169,6 +169,24 @@ export function ControlPlaneDashboardView({
           )}
         </Section>
 
+        <Section title="Activated AI Team">
+          <div className="table-list">
+            {dashboard.activatedWorkforceAssignments.slice(0, 10).map((assignment) => (
+              <div className="row" key={assignment.id}>
+                <span>{assignment.role}</span>
+                <Badge status={assignment.status} />
+                <span className="muted">{simpleAgentTask(assignment.currentTask, assignment.status)}</span>
+              </div>
+            ))}
+            {dashboard.activatedWorkforceAssignments.length === 0 ? (
+              <p className="muted">No approved team expansion has been activated yet.</p>
+            ) : null}
+          </div>
+        </Section>
+      </div>
+
+      <div className="grid two">
+
         <Section title="AI Team">
           <div className="status-grid">
             {dashboard.agentAssignments.slice(0, 6).map((assignment) => (

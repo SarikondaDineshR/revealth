@@ -20,6 +20,7 @@ export const artifactTypeSchema = z.enum([
   "codex_execution_contract",
   "branch_preparation_plan",
   "workforce_scaling_plan",
+  "client_communication_script",
 ]);
 
 export const projectBriefSchema = z.object({
@@ -117,6 +118,30 @@ export const workforceScalingPlanSchema = z.object({
   humanReadableSummary: nonEmptyString,
   approvalRequired: z.literal(true),
   automaticAgentCreationAllowed: z.literal(false),
+  sourceIds: z.array(uuidSchema).default([]),
+});
+
+export const clientCommunicationScriptSchema = z.object({
+  schemaVersion: z.literal("revealth.client_communication_script.v1"),
+  clientCommunicationScriptId: uuidSchema,
+  targetClient: z.object({
+    clientProfileId: uuidSchema,
+    name: nonEmptyString,
+    company: nonEmptyString,
+  }),
+  leadId: uuidSchema,
+  objective: nonEmptyString,
+  discoveryQuestions: z.array(nonEmptyString).min(1),
+  valueProposition: nonEmptyString,
+  objectionHandling: z.array(
+    z.object({
+      objection: nonEmptyString,
+      response: nonEmptyString,
+    }),
+  ).min(1),
+  nextStepRecommendation: nonEmptyString,
+  approvalRequired: z.literal(true),
+  externalCommunicationAllowed: z.literal(false),
   sourceIds: z.array(uuidSchema).default([]),
 });
 
@@ -295,6 +320,7 @@ export type TaskBatch = z.infer<typeof taskBatchSchema>;
 export type ProjectComplexity = z.infer<typeof projectComplexitySchema>;
 export type WorkforceRoleRecommendation = z.infer<typeof workforceRoleRecommendationSchema>;
 export type WorkforceScalingPlan = z.infer<typeof workforceScalingPlanSchema>;
+export type ClientCommunicationScript = z.infer<typeof clientCommunicationScriptSchema>;
 export type GitHubIssueBatch = z.infer<typeof githubIssueBatchSchema>;
 export type CodexTaskPacket = z.infer<typeof codexTaskPacketSchema>;
 export type CodexTaskPacketBatch = z.infer<typeof codexTaskPacketBatchSchema>;

@@ -70,6 +70,7 @@ describe("ControlPlaneService aggregation", () => {
           artifact({ id: "brief", artifactType: "project_brief", version: 1, status: "approved" }),
           artifact({ id: "branch-plan", artifactType: "branch_preparation_plan", version: 1, status: "pending_approval" }),
           artifact({ id: "workforce-plan", artifactType: "workforce_scaling_plan", version: 1, status: "pending_approval" }),
+          artifact({ id: "client-script", artifactType: "client_communication_script", version: 1, status: "pending_approval" }),
         ],
       },
       approval: { findMany: async () => [{ id: "approval-1", status: "pending", createdAt: new Date() }] },
@@ -145,6 +146,55 @@ describe("ControlPlaneService aggregation", () => {
           },
         ],
       },
+      clientProfile: {
+        findMany: async () => [
+          {
+            id: "client-1",
+            name: "Ada Lovelace",
+            company: "Analytical Engines LLC",
+            status: "lead",
+            source: "demo",
+            notes: "Demo client.",
+          },
+        ],
+      },
+      clientLead: {
+        findMany: async () => [
+          {
+            id: "lead-1",
+            clientProfileId: "client-1",
+            title: "Password manager MVP",
+            needSummary: "Needs safe planning before security implementation.",
+            urgency: "medium",
+            stage: "discovery",
+            ownerAgentRole: "Sales Agent",
+          },
+        ],
+      },
+      clientConversation: {
+        findMany: async () => [
+          {
+            id: "conversation-1",
+            clientProfileId: "client-1",
+            agentRole: "Sales Agent",
+            channel: "simulated_chat",
+            visibility: "client_visible",
+            message: "Drafting a safe discovery update for approval.",
+          },
+        ],
+      },
+      meetingRequest: {
+        findMany: async () => [
+          {
+            id: "meeting-1",
+            clientProfileId: "client-1",
+            requestedByAgentRole: "Customer Success Agent",
+            purpose: "Simulated discovery review",
+            status: "pending_approval",
+            externalJoinEnabled: false,
+          },
+        ],
+      },
     };
     const service = new ControlPlaneService(
       db as never,
@@ -184,6 +234,13 @@ describe("ControlPlaneService aggregation", () => {
     expect(dashboard.workforceDispatches).toHaveLength(1);
     expect(dashboard.workforceDispatchStatusCounts).toEqual({ in_progress: 1 });
     expect(dashboard.recentWorkforceHandoffs).toHaveLength(1);
+    expect(dashboard.clients).toHaveLength(1);
+    expect(dashboard.leads).toHaveLength(1);
+    expect(dashboard.leadStageCounts).toEqual({ discovery: 1 });
+    expect(dashboard.clientVisibleConversations).toHaveLength(1);
+    expect(dashboard.meetingRequests).toHaveLength(1);
+    expect(dashboard.meetingRequestStatusCounts).toEqual({ pending_approval: 1 });
+    expect(dashboard.clientCommunicationScripts).toHaveLength(1);
     expect(dashboard.workflowStatusCounts).toEqual({ completed: 1 });
   });
 });

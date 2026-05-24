@@ -78,6 +78,10 @@ export class ControlPlaneService {
       agentAssignments,
       agentMessages,
       workforceDispatches,
+      clients,
+      leads,
+      clientConversations,
+      meetingRequests,
       executorHealth,
       executorRepoStatus,
     ] = await Promise.all([
@@ -90,12 +94,17 @@ export class ControlPlaneService {
       this.db.agentAssignment.findMany({ where: { workspaceId }, orderBy: [{ status: "asc" }, { startedAt: "desc" }], take: 50 }),
       this.db.agentMessage.findMany({ where: { workspaceId }, orderBy: { createdAt: "desc" }, take: 100 }),
       this.db.workforceDispatch.findMany({ where: { workspaceId }, orderBy: [{ status: "asc" }, { startedAt: "desc" }], take: 100 }),
+      this.db.clientProfile.findMany({ where: { workspaceId }, orderBy: [{ status: "asc" }, { createdAt: "desc" }], take: 50 }),
+      this.db.clientLead.findMany({ where: { workspaceId }, include: { clientProfile: true }, orderBy: [{ stage: "asc" }, { createdAt: "desc" }], take: 50 }),
+      this.db.clientConversation.findMany({ where: { workspaceId }, include: { clientProfile: true }, orderBy: { createdAt: "desc" }, take: 100 }),
+      this.db.meetingRequest.findMany({ where: { workspaceId }, include: { clientProfile: true }, orderBy: [{ status: "asc" }, { createdAt: "desc" }], take: 50 }),
       this.getExecutorHealth(),
       this.getExecutorRepoStatus(),
     ]);
 
     const branchPreparationPlans = artifacts.filter((artifact: Artifact) => artifact.artifactType === "branch_preparation_plan");
     const workforceScalingPlans = artifacts.filter((artifact: Artifact) => artifact.artifactType === "workforce_scaling_plan");
+    const clientCommunicationScripts = artifacts.filter((artifact: Artifact) => artifact.artifactType === "client_communication_script");
     const workforceScalingPlanIds = new Set(workforceScalingPlans.map((artifact) => artifact.id));
     const activatedWorkforceAssignments = agentAssignments.filter((assignment) =>
       assignment.assignedArtifactId ? workforceScalingPlanIds.has(assignment.assignedArtifactId) : false,
@@ -147,6 +156,14 @@ export class ControlPlaneService {
       workforceDispatches,
       workforceDispatchStatusCounts: countByStatus(workforceDispatches),
       recentWorkforceHandoffs: agentMessages.filter((message) => message.messageType === "handoff").slice(0, 10),
+      clients,
+      leads,
+      leadStageCounts: countByStatus(leads.map((lead) => ({ status: lead.stage }))),
+      clientConversations,
+      clientVisibleConversations: clientConversations.filter((conversation) => conversation.visibility === "client_visible"),
+      meetingRequests,
+      meetingRequestStatusCounts: countByStatus(meetingRequests),
+      clientCommunicationScripts,
       githubIssues,
       agentAssignments,
       agentMessages,

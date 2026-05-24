@@ -144,6 +144,73 @@ export interface WorkforceScalingPlan extends Artifact {
   };
 }
 
+export interface ClientProfile {
+  id: string;
+  workspaceId: string;
+  name: string;
+  company: string;
+  email: string | null;
+  phone: string | null;
+  status: "lead" | "prospect" | "customer" | "inactive";
+  source: string;
+  notes: string;
+  createdAt: string;
+}
+
+export interface ClientLead {
+  id: string;
+  workspaceId: string;
+  clientProfileId: string;
+  clientProfile?: ClientProfile;
+  title: string;
+  needSummary: string;
+  budgetRange: string | null;
+  urgency: "low" | "medium" | "high";
+  stage: "new" | "discovery" | "proposal_needed" | "waiting_for_approval" | "closed_won" | "closed_lost";
+  ownerAgentRole: string;
+  createdAt: string;
+}
+
+export interface ClientConversation {
+  id: string;
+  workspaceId: string;
+  clientProfileId: string;
+  clientProfile?: ClientProfile;
+  agentRole: string;
+  channel: "simulated_chat" | "internal_note" | "meeting_request";
+  visibility: "internal" | "client_visible";
+  message: string;
+  approvalRequired: boolean;
+  approvedAt: string | null;
+  createdAt: string;
+}
+
+export interface MeetingRequest {
+  id: string;
+  workspaceId: string;
+  clientProfileId: string;
+  clientProfile?: ClientProfile;
+  requestedByAgentRole: string;
+  purpose: string;
+  proposedTime: string | null;
+  status: "draft" | "pending_approval" | "approved" | "rejected" | "scheduled_simulated";
+  consentRequired: boolean;
+  externalJoinEnabled: boolean;
+  createdAt: string;
+}
+
+export interface ClientCommunicationScript extends Artifact {
+  artifactType: "client_communication_script";
+  contentJson: {
+    targetClient?: { name: string; company: string };
+    objective?: string;
+    discoveryQuestions?: string[];
+    valueProposition?: string;
+    nextStepRecommendation?: string;
+    externalCommunicationAllowed?: boolean;
+  };
+}
+
 export interface RepoStatus {
   currentBranch: string;
   isClean: boolean;
@@ -198,6 +265,14 @@ export interface ControlPlaneDashboard {
   workforceDispatches: WorkforceDispatch[];
   workforceDispatchStatusCounts: Record<string, number>;
   recentWorkforceHandoffs: AgentMessage[];
+  clients: ClientProfile[];
+  leads: ClientLead[];
+  leadStageCounts: Record<string, number>;
+  clientConversations: ClientConversation[];
+  clientVisibleConversations: ClientConversation[];
+  meetingRequests: MeetingRequest[];
+  meetingRequestStatusCounts: Record<string, number>;
+  clientCommunicationScripts: ClientCommunicationScript[];
 }
 
 export const api = {

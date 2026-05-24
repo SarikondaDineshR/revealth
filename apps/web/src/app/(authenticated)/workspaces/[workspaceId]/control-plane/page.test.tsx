@@ -83,6 +83,19 @@ const dashboard: ControlPlaneDashboard = {
       contentJson: {},
       createdAt: "2026-05-23T00:00:00.000Z",
     },
+    {
+      id: "artifact-client-script",
+      artifactType: "client_communication_script",
+      version: 1,
+      status: "pending_approval",
+      schemaVersion: "revealth.client_communication_script.v1",
+      contentJson: {
+        targetClient: { name: "Ada Lovelace", company: "Analytical Engines LLC" },
+        objective: "Prepare a safe discovery conversation.",
+        externalCommunicationAllowed: false,
+      },
+      createdAt: "2026-05-23T00:00:00.000Z",
+    },
   ],
   artifactStatusCounts: { approved: 1 },
   approvals: [
@@ -229,6 +242,117 @@ const dashboard: ControlPlaneDashboard = {
       createdAt: "2026-05-23T00:00:00.000Z",
     },
   ],
+  clients: [
+    {
+      id: "client-1",
+      workspaceId: "workspace-1",
+      name: "Ada Lovelace",
+      company: "Analytical Engines LLC",
+      email: "ada@example.com",
+      phone: null,
+      status: "lead",
+      source: "demo",
+      notes: "Interested in governed software planning.",
+      createdAt: "2026-05-23T00:00:00.000Z",
+    },
+  ],
+  leads: [
+    {
+      id: "lead-1",
+      workspaceId: "workspace-1",
+      clientProfileId: "client-1",
+      clientProfile: {
+        id: "client-1",
+        workspaceId: "workspace-1",
+        name: "Ada Lovelace",
+        company: "Analytical Engines LLC",
+        email: "ada@example.com",
+        phone: null,
+        status: "lead",
+        source: "demo",
+        notes: "Interested in governed software planning.",
+        createdAt: "2026-05-23T00:00:00.000Z",
+      },
+      title: "Password manager MVP",
+      needSummary: "Needs safe planning before security implementation.",
+      budgetRange: null,
+      urgency: "medium",
+      stage: "discovery",
+      ownerAgentRole: "Sales Agent",
+      createdAt: "2026-05-23T00:00:00.000Z",
+    },
+  ],
+  leadStageCounts: { discovery: 1 },
+  clientConversations: [
+    {
+      id: "conversation-1",
+      workspaceId: "workspace-1",
+      clientProfileId: "client-1",
+      clientProfile: {
+        id: "client-1",
+        workspaceId: "workspace-1",
+        name: "Ada Lovelace",
+        company: "Analytical Engines LLC",
+        email: "ada@example.com",
+        phone: null,
+        status: "lead",
+        source: "demo",
+        notes: "Interested in governed software planning.",
+        createdAt: "2026-05-23T00:00:00.000Z",
+      },
+      agentRole: "Sales Agent",
+      channel: "simulated_chat",
+      visibility: "client_visible",
+      message: "Drafting a safe discovery update for approval.",
+      approvalRequired: true,
+      approvedAt: null,
+      createdAt: "2026-05-23T00:00:00.000Z",
+    },
+  ],
+  clientVisibleConversations: [
+    {
+      id: "conversation-1",
+      workspaceId: "workspace-1",
+      clientProfileId: "client-1",
+      agentRole: "Sales Agent",
+      channel: "simulated_chat",
+      visibility: "client_visible",
+      message: "Drafting a safe discovery update for approval.",
+      approvalRequired: true,
+      approvedAt: null,
+      createdAt: "2026-05-23T00:00:00.000Z",
+    },
+  ],
+  meetingRequests: [
+    {
+      id: "meeting-1",
+      workspaceId: "workspace-1",
+      clientProfileId: "client-1",
+      requestedByAgentRole: "Customer Success Agent",
+      purpose: "Simulated discovery review",
+      proposedTime: null,
+      status: "pending_approval",
+      consentRequired: true,
+      externalJoinEnabled: false,
+      createdAt: "2026-05-23T00:00:00.000Z",
+    },
+  ],
+  meetingRequestStatusCounts: { pending_approval: 1 },
+  clientCommunicationScripts: [
+    {
+      id: "artifact-client-script",
+      artifactType: "client_communication_script",
+      version: 1,
+      status: "pending_approval",
+      schemaVersion: "revealth.client_communication_script.v1",
+      contentJson: {
+        targetClient: { name: "Ada Lovelace", company: "Analytical Engines LLC" },
+        objective: "Prepare a safe discovery conversation.",
+        externalCommunicationAllowed: false,
+      },
+      createdAt: "2026-05-23T00:00:00.000Z",
+    },
+  ],
 };
 
 describe("ControlPlaneDashboardView", () => {
@@ -247,6 +371,13 @@ describe("ControlPlaneDashboardView", () => {
     expect(html).toContain("Live AI Work Dispatch");
     expect(html).toContain("Current Team Activity");
     expect(html).toContain("Recent Team Handoffs");
+    expect(html).toContain("Client Pipeline");
+    expect(html).toContain("Lead Discovery");
+    expect(html).toContain("Client Communication Feed");
+    expect(html).toContain("Meeting Requests");
+    expect(html).toContain("Sales/Support Script Drafts");
+    expect(html).toContain("Analytical Engines LLC");
+    expect(html).toContain("No external joining");
     expect(html).toContain("QA Agent");
     expect(html).toContain("Who Is Working On What");
     expect(html).toContain("Agent Communication Feed");

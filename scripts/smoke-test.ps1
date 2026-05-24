@@ -91,6 +91,47 @@ if ($activation.createdAssignments.Count -lt 1) { throw "Expected workforce acti
 $dispatch = (Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/workforce/dispatch").data
 if ($dispatch.createdDispatchCount -lt 1) { throw "Expected workforce dispatch to create work records." }
 
+$client = (Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/clients" -Body (@{
+  name = "Ada Lovelace"
+  company = "Analytical Engines LLC"
+  email = "ada@example.com"
+  status = "lead"
+  source = "smoke_demo"
+  notes = "Demo client for governed client communication foundation."
+} | ConvertTo-Json)).data
+
+$lead = (Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/leads" -Body (@{
+  clientProfileId = $client.id
+  title = "Password manager MVP discovery"
+  needSummary = "Build a small password manager MVP with fake demo data until security architecture is reviewed."
+  budgetRange = "demo-only"
+  urgency = "medium"
+  stage = "discovery"
+  ownerAgentRole = "Sales Agent"
+} | ConvertTo-Json)).data
+
+Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/client-conversations" -Body (@{
+  clientProfileId = $client.id
+  agentRole = "Sales Agent"
+  channel = "simulated_chat"
+  visibility = "client_visible"
+  message = "Preparing a safe discovery script for owner approval before any real client outreach."
+  approvalRequired = $true
+} | ConvertTo-Json) | Out-Null
+
+$meetingRequest = (Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/meeting-requests" -Body (@{
+  clientProfileId = $client.id
+  requestedByAgentRole = "Customer Success Agent"
+  purpose = "Simulated discovery meeting request for owner review"
+  status = "pending_approval"
+  consentRequired = $true
+} | ConvertTo-Json)).data
+if ($meetingRequest.externalJoinEnabled -ne $false) { throw "Expected meeting request externalJoinEnabled to remain false." }
+
+$clientScript = (Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/leads/$($lead.id)/client-communication-scripts").data
+if ($clientScript.artifactType -ne "client_communication_script") { throw "Expected client_communication_script artifact." }
+if ($clientScript.status -ne "pending_approval") { throw "Expected client_communication_script pending approval." }
+
 $githubBatch = Wait-ForArtifactType -WorkspaceId $workspace.id -ArtifactType "github_issue_batch"
 Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/github/connections" -Body (@{ repository = "draft/repository" } | ConvertTo-Json) | Out-Null
 Approve-Artifact -WorkspaceId $workspace.id -Artifact $githubBatch -Notes "Smoke: approve GitHub issue batch dry-run." | Out-Null
@@ -130,6 +171,21 @@ if (-not $controlPlane.workforceDispatches -or $controlPlane.workforceDispatches
 }
 if (-not $controlPlane.recentWorkforceHandoffs -or $controlPlane.recentWorkforceHandoffs.Count -lt 1) {
   throw "Control plane workforce handoffs missing."
+}
+if (-not $controlPlane.clients -or $controlPlane.clients.Count -lt 1) {
+  throw "Control plane client profiles missing."
+}
+if (-not $controlPlane.leads -or $controlPlane.leads.Count -lt 1) {
+  throw "Control plane leads missing."
+}
+if (-not $controlPlane.clientConversations -or $controlPlane.clientConversations.Count -lt 1) {
+  throw "Control plane client conversations missing."
+}
+if (-not $controlPlane.meetingRequests -or $controlPlane.meetingRequests.Count -lt 1) {
+  throw "Control plane meeting requests missing."
+}
+if (-not $controlPlane.clientCommunicationScripts -or $controlPlane.clientCommunicationScripts.Count -lt 1) {
+  throw "Control plane client communication scripts missing."
 }
 
 Write-Host "Smoke test passed."

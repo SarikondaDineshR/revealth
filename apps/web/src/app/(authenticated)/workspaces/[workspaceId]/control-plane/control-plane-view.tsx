@@ -185,6 +185,90 @@ export function ControlPlaneDashboardView({
       </Section>
 
       <div className="grid two">
+        <Section title="Client Pipeline">
+          <CountStrip counts={dashboard.leadStageCounts} />
+          <div className="table-list">
+            {dashboard.clients.slice(0, 8).map((client) => (
+              <div className="row" key={client.id}>
+                <span>{client.name}</span>
+                <Badge status={client.status} />
+                <span className="muted">{client.company}</span>
+              </div>
+            ))}
+            {dashboard.clients.length === 0 ? <p className="muted">No client profiles yet.</p> : null}
+          </div>
+        </Section>
+
+        <Section title="Lead Discovery">
+          <div className="table-list">
+            {dashboard.leads.slice(0, 8).map((lead) => (
+              <div className="row" key={lead.id}>
+                <span>{lead.title}</span>
+                <Badge status={lead.stage} />
+                <span className="muted">{lead.needSummary}</span>
+              </div>
+            ))}
+            {dashboard.leads.length === 0 ? <p className="muted">No lead discovery records yet.</p> : null}
+          </div>
+        </Section>
+      </div>
+
+      <div className="grid two">
+        <Section title="Client Communication Feed">
+          <div className="timeline">
+            {dashboard.clientConversations.slice(0, 8).map((conversation) => (
+              <div className="timeline-item" key={conversation.id}>
+                <Badge status={conversation.visibility} />
+                <div>
+                  <strong>{conversation.agentRole}</strong>
+                  <p className="tight">{conversation.message}</p>
+                  <p className="muted tight">
+                    {conversation.channel} - {conversation.clientProfile?.name ?? "Client"}
+                  </p>
+                </div>
+              </div>
+            ))}
+            {dashboard.clientConversations.length === 0 ? <p className="muted">No simulated client updates yet.</p> : null}
+          </div>
+        </Section>
+
+        <Section title="Meeting Requests">
+          <CountStrip counts={dashboard.meetingRequestStatusCounts} />
+          <div className="table-list">
+            {dashboard.meetingRequests.slice(0, 8).map((request) => (
+              <div className="row" key={request.id}>
+                <span>{request.purpose}</span>
+                <Badge status={request.status} />
+                <span className="muted">
+                  {request.externalJoinEnabled ? "External join enabled" : "No external joining"}
+                </span>
+              </div>
+            ))}
+            {dashboard.meetingRequests.length === 0 ? <p className="muted">No meeting requests yet.</p> : null}
+          </div>
+        </Section>
+      </div>
+
+      <Section title="Sales/Support Script Drafts">
+        <div className="table-list">
+          {dashboard.clientCommunicationScripts.slice(0, 8).map((artifact) => (
+            <Link
+              className="row"
+              href={`/workspaces/${workspaceId}/artifacts/${artifact.id}`}
+              key={artifact.id}
+            >
+              <span>{artifact.contentJson.targetClient?.company ?? "Client script"}</span>
+              <Badge status={artifact.status} />
+              <span className="muted">{artifact.contentJson.objective ?? "Waiting for owner review"}</span>
+            </Link>
+          ))}
+          {dashboard.clientCommunicationScripts.length === 0 ? (
+            <p className="muted">No sales or support script drafts yet.</p>
+          ) : null}
+        </div>
+      </Section>
+
+      <div className="grid two">
         <Section title="Recommended AI Team Scaling">
           {latestWorkforcePlan && workforceContent ? (
             <div className="grid compact">

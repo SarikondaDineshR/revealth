@@ -71,6 +71,8 @@ export function ControlPlaneDashboardView({
   const repoStatus = dashboard.readiness.repoStatus.data;
   const pendingApprovals = dashboard.approvals.filter((approval) => approval.status === "pending");
   const latestExecutionRun = dashboard.executionRuns[0] ?? null;
+  const latestWorkforcePlan = dashboard.workforceScalingPlans[0] ?? null;
+  const workforceContent = latestWorkforcePlan?.contentJson ?? null;
   const auditStatuses = Array.from(new Set(dashboard.auditEvents.map((event) => event.status))).slice(0, 4);
   const auditActions = Array.from(new Set(dashboard.auditEvents.map((event) => event.action))).slice(0, 4);
   const demoStatus = demoStatusLabel({
@@ -137,6 +139,36 @@ export function ControlPlaneDashboardView({
       </Section>
 
       <div className="grid two">
+        <Section title="Recommended AI Team Scaling">
+          {latestWorkforcePlan && workforceContent ? (
+            <div className="grid compact">
+              <div className="detail-grid">
+                <span>Project size</span>
+                <Badge status={workforceContent.projectComplexity ?? "planned"} />
+                <span>Plan status</span>
+                <Badge status={latestWorkforcePlan.status} />
+                <span>Recommended roles</span>
+                <strong>{workforceContent.requiredRoles?.length ?? 0}</strong>
+              </div>
+              <p className="notice">{workforceContent.humanReadableSummary ?? "Revealth has prepared a staffing recommendation for owner review."}</p>
+              <div className="table-list">
+                {(workforceContent.requiredRoles ?? []).slice(0, 6).map((role) => (
+                  <div className="row" key={role.role}>
+                    <span>{role.role}</span>
+                    <strong>{role.recommendedAgentCount}</strong>
+                    <span className="muted">{role.reason}</span>
+                  </div>
+                ))}
+              </div>
+              {(workforceContent.expectedBottlenecks ?? []).length > 0 ? (
+                <p className="muted tight">Watch next: {workforceContent.expectedBottlenecks?.[0]}</p>
+              ) : null}
+            </div>
+          ) : (
+            <p className="muted">No team scaling recommendation yet.</p>
+          )}
+        </Section>
+
         <Section title="AI Team">
           <div className="status-grid">
             {dashboard.agentAssignments.slice(0, 6).map((assignment) => (

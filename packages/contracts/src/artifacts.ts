@@ -19,6 +19,7 @@ export const artifactTypeSchema = z.enum([
   "git_execution_plan",
   "codex_execution_contract",
   "branch_preparation_plan",
+  "workforce_scaling_plan",
 ]);
 
 export const projectBriefSchema = z.object({
@@ -94,6 +95,28 @@ export const taskBatchSchema = z.object({
   schemaVersion: z.literal("revealth.task_batch.v1"),
   taskBatchId: uuidSchema,
   tasks: z.array(taskSchema).min(1),
+  sourceIds: z.array(uuidSchema).default([]),
+});
+
+export const projectComplexitySchema = z.enum(["small", "medium", "large", "enterprise"]);
+
+export const workforceRoleRecommendationSchema = z.object({
+  role: nonEmptyString,
+  recommendedAgentCount: z.number().int().positive(),
+  reason: nonEmptyString,
+});
+
+export const workforceScalingPlanSchema = z.object({
+  schemaVersion: z.literal("revealth.workforce_scaling_plan.v1"),
+  workforceScalingPlanId: uuidSchema,
+  sourceTaskBatchArtifactId: uuidSchema,
+  projectComplexity: projectComplexitySchema,
+  requiredRoles: z.array(workforceRoleRecommendationSchema).min(1),
+  assignmentStrategy: nonEmptyString,
+  expectedBottlenecks: z.array(nonEmptyString).min(1),
+  humanReadableSummary: nonEmptyString,
+  approvalRequired: z.literal(true),
+  automaticAgentCreationAllowed: z.literal(false),
   sourceIds: z.array(uuidSchema).default([]),
 });
 
@@ -269,6 +292,9 @@ export type ArchitecturePlan = z.infer<typeof architecturePlanSchema>;
 export type SdlcPlan = z.infer<typeof sdlcPlanSchema>;
 export type TaskRecord = z.infer<typeof taskSchema>;
 export type TaskBatch = z.infer<typeof taskBatchSchema>;
+export type ProjectComplexity = z.infer<typeof projectComplexitySchema>;
+export type WorkforceRoleRecommendation = z.infer<typeof workforceRoleRecommendationSchema>;
+export type WorkforceScalingPlan = z.infer<typeof workforceScalingPlanSchema>;
 export type GitHubIssueBatch = z.infer<typeof githubIssueBatchSchema>;
 export type CodexTaskPacket = z.infer<typeof codexTaskPacketSchema>;
 export type CodexTaskPacketBatch = z.infer<typeof codexTaskPacketBatchSchema>;

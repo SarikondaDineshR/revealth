@@ -121,6 +121,16 @@ export interface BranchPreparationPlan extends Artifact {
   artifactType: "branch_preparation_plan";
 }
 
+export interface WorkforceScalingPlan extends Artifact {
+  artifactType: "workforce_scaling_plan";
+  contentJson: {
+    projectComplexity?: string;
+    requiredRoles?: Array<{ role: string; recommendedAgentCount: number; reason: string }>;
+    expectedBottlenecks?: string[];
+    humanReadableSummary?: string;
+  };
+}
+
 export interface RepoStatus {
   currentBranch: string;
   isClean: boolean;
@@ -166,6 +176,7 @@ export interface ControlPlaneDashboard {
   executionRunStatusCounts: Record<string, number>;
   auditEvents: AuditEvent[];
   branchPreparationPlans: BranchPreparationPlan[];
+  workforceScalingPlans: WorkforceScalingPlan[];
   githubIssues: Array<{ id: string; title: string; status: string; dryRun: boolean; repository: string }>;
   agentAssignments: AgentAssignment[];
   agentMessages: AgentMessage[];

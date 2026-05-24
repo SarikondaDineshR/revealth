@@ -123,6 +123,28 @@ const dashboard: ControlPlaneDashboard = {
     },
   ],
   branchPreparationPlans: [],
+  workforceScalingPlans: [
+    {
+      id: "artifact-workforce-plan",
+      artifactType: "workforce_scaling_plan",
+      version: 1,
+      status: "pending_approval",
+      schemaVersion: "revealth.workforce_scaling_plan.v1",
+      contentJson: {
+        projectComplexity: "medium",
+        humanReadableSummary: "This looks like a medium project. Revealth recommends 5 AI team members.",
+        requiredRoles: [
+          {
+            role: "Product Manager Agent",
+            recommendedAgentCount: 1,
+            reason: "Keeps the work tied to user outcomes.",
+          },
+        ],
+        expectedBottlenecks: ["Owner approvals can pause progress."],
+      },
+      createdAt: "2026-05-23T00:00:00.000Z",
+    },
+  ],
   githubIssues: [{ id: "issue-1", title: "Draft issue", status: "dry_run", dryRun: true, repository: "draft/repo" }],
   agentAssignments: [
     {
@@ -178,10 +200,12 @@ describe("ControlPlaneDashboardView", () => {
     expect(html).toContain("Readiness Summary");
     expect(html).toContain("Lineage");
     expect(html).toContain("AI Team");
+    expect(html).toContain("Recommended AI Team Scaling");
     expect(html).toContain("Who Is Working On What");
     expect(html).toContain("Agent Communication Feed");
     expect(html).toContain("Client-visible Updates");
     expect(html).toContain("Product Manager Agent");
+    expect(html).toContain("This looks like a medium project");
     expect(html).toContain("Approval Queue");
     expect(html).toContain("Executor Health");
     expect(html).toContain("Temporal Workflow Status");

@@ -69,6 +69,7 @@ describe("ControlPlaneService aggregation", () => {
         findMany: async () => [
           artifact({ id: "brief", artifactType: "project_brief", version: 1, status: "approved" }),
           artifact({ id: "branch-plan", artifactType: "branch_preparation_plan", version: 1, status: "pending_approval" }),
+          artifact({ id: "workforce-plan", artifactType: "workforce_scaling_plan", version: 1, status: "pending_approval" }),
         ],
       },
       approval: { findMany: async () => [{ id: "approval-1", status: "pending", createdAt: new Date() }] },
@@ -144,6 +145,7 @@ describe("ControlPlaneService aggregation", () => {
     expect(dashboard.readiness.readyForLiveExecution).toBe(true);
     expect(dashboard.readiness.latestPreflightStatus).toBe("passed");
     expect(dashboard.branchPreparationPlans).toHaveLength(1);
+    expect(dashboard.workforceScalingPlans).toHaveLength(1);
     expect(dashboard.agentAssignments).toHaveLength(1);
     expect(dashboard.clientVisibleAgentMessages).toHaveLength(1);
     expect(dashboard.workflowStatusCounts).toEqual({ completed: 1 });

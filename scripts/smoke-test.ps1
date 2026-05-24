@@ -81,6 +81,9 @@ Approve-Artifact -WorkspaceId $workspace.id -Artifact $sdlcPlan -Notes "Smoke: a
 
 $taskBatch = Wait-ForArtifactType -WorkspaceId $workspace.id -ArtifactType "task_batch"
 Approve-Artifact -WorkspaceId $workspace.id -Artifact $taskBatch -Notes "Smoke: approve task batch." | Out-Null
+$workforcePlan = (Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/artifacts/$($taskBatch.id)/workforce-scaling-plans").data
+if ($workforcePlan.artifactType -ne "workforce_scaling_plan") { throw "Expected workforce_scaling_plan artifact." }
+if ($workforcePlan.status -ne "pending_approval") { throw "Expected workforce_scaling_plan pending approval." }
 
 $githubBatch = Wait-ForArtifactType -WorkspaceId $workspace.id -ArtifactType "github_issue_batch"
 Invoke-Revealth -Method POST -Path "/workspaces/$($workspace.id)/github/connections" -Body (@{ repository = "draft/repository" } | ConvertTo-Json) | Out-Null
@@ -109,6 +112,9 @@ if (-not $controlPlane.agentAssignments -or $controlPlane.agentAssignments.Count
 }
 if (-not $controlPlane.clientVisibleAgentMessages -or $controlPlane.clientVisibleAgentMessages.Count -lt 1) {
   throw "Control plane client-visible agent updates missing."
+}
+if (-not $controlPlane.workforceScalingPlans -or $controlPlane.workforceScalingPlans.Count -lt 1) {
+  throw "Control plane workforce scaling plan missing."
 }
 
 Write-Host "Smoke test passed."

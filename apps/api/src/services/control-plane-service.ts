@@ -93,6 +93,7 @@ export class ControlPlaneService {
     ]);
 
     const branchPreparationPlans = artifacts.filter((artifact: Artifact) => artifact.artifactType === "branch_preparation_plan");
+    const workforceScalingPlans = artifacts.filter((artifact: Artifact) => artifact.artifactType === "workforce_scaling_plan");
     const latestExecutionRun = executionRuns[0] ?? null;
     const latestPreflight = auditEvents.find((event: AuditLog) =>
       event.action === "codex.execution_run.preflight.passed" || event.action === "codex.execution_run.preflight.failed",
@@ -135,6 +136,7 @@ export class ControlPlaneService {
       executionRunStatusCounts: countByStatus(executionRuns),
       auditEvents,
       branchPreparationPlans,
+      workforceScalingPlans,
       githubIssues,
       agentAssignments,
       agentMessages,

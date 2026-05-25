@@ -13,7 +13,8 @@
     "db:generate": "dotenv -e ../../.env -- prisma generate --schema prisma/schema.prisma",
     "db:deploy": "dotenv -e ../../.env -- prisma migrate deploy --schema prisma/schema.prisma",
     "db:migrate": "dotenv -e ../../.env -- prisma migrate dev --schema prisma/schema.prisma",
-    "db:seed": "dotenv -e ../../.env -- tsx prisma/seed.ts"
+    "db:seed": "dotenv -e ../../.env -- tsx prisma/seed.ts",
+    "demo:recordable": "dotenv -e ../../.env -- tsx prisma/recordable-demo.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.1.0"

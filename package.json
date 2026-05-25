@@ -23,7 +23,8 @@
     "docker:down": "docker compose down",
     "demo:doctor": "powershell -ExecutionPolicy Bypass -File scripts/demo-doctor.ps1",
     "demo:bootstrap": "powershell -ExecutionPolicy Bypass -File scripts/demo-bootstrap.ps1",
-    "demo:smoke": "powershell -ExecutionPolicy Bypass -File scripts/smoke-test.ps1"
+    "demo:smoke": "powershell -ExecutionPolicy Bypass -File scripts/smoke-test.ps1",
+    "demo:recordable": "corepack pnpm --filter @revealth/database demo:recordable"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^7.18.0",
